@@ -10,7 +10,7 @@ class ShopProfileModal extends StatefulWidget {
 }
 
 class _ShopProfileModalState extends State<ShopProfileModal> {
-  final _nameController = TextEditingController(text: 'Manisha Collection');
+  final _nameController = TextEditingController(text: 'RetailFlow');
   final _gstinController = TextEditingController(text: '27AADCB2230M1Z2');
   final _addressController = TextEditingController(text: '123 Main Street, Market Area, City');
   final _phoneController = TextEditingController(text: '+91 9876543210');

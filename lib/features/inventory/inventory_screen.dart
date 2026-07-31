@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../core/database/database_helper.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import '../products/add_product_screen.dart';
@@ -90,10 +91,11 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Inventory'),
+        title: Text(loc.translate('inventory')),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),

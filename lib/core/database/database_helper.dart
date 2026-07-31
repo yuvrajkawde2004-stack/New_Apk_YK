@@ -20,9 +20,27 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDatabase,
+      onUpgrade: _upgradeDatabase,
     );
+  }
+
+  Future<void> _upgradeDatabase(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE customers(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT NOT NULL UNIQUE,
+          address TEXT,
+          total_spent REAL DEFAULT 0,
+          outstanding_balance REAL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT
+        )
+      ''');
+    }
   }
 
   // ==========================
@@ -41,6 +59,20 @@ class DatabaseHelper {
         purchase_date TEXT,
         notes TEXT,
         low_stock_limit INTEGER NOT NULL DEFAULT 5,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
+      )
+    ''');
+
+    // CUSTOMERS TABLE
+    await db.execute('''
+      CREATE TABLE customers(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL UNIQUE,
+        address TEXT,
+        total_spent REAL DEFAULT 0,
+        outstanding_balance REAL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT
       )
@@ -134,8 +166,74 @@ class DatabaseHelper {
     // Initial Shop Settings
     await db.rawInsert('''
       INSERT INTO shop_settings (shop_name, address, mobile, gst_number, footer)
-      VALUES ('Manisha Collection', 'Main Market, Cloth Line', '9876543210', '27AAAAA0000A1Z5', 'Thank you for shopping with us!')
+      VALUES ('RetailFlow', 'Main Market, Cloth Line', '9876543210', '27AAAAA0000A1Z5', 'Thank you for shopping with us!')
     ''');
+  }
+
+  // ==========================
+  // 1.5 CUSTOMERS CRUD
+  // ==========================
+  
+  Future<int> addCustomer(Map<String, dynamic> customer) async {
+    final db = await database;
+    customer['created_at'] = DateTime.now().toIso8601String();
+    return await db.insert(
+      'customers',
+      customer,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getCustomers({int limit = 50, int offset = 0}) async {
+    final db = await database;
+    return await db.query(
+      'customers',
+      orderBy: 'name ASC',
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getCustomerById(int id) async {
+    final db = await database;
+    final result = await db.query(
+      'customers',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (result.isNotEmpty) return result.first;
+    return null;
+  }
+
+  Future<int> updateCustomer(int id, Map<String, dynamic> customer) async {
+    final db = await database;
+    customer['updated_at'] = DateTime.now().toIso8601String();
+    return await db.update(
+      'customers',
+      customer,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteCustomer(int id) async {
+    final db = await database;
+    return await db.delete(
+      'customers',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> searchCustomers(String keyword) async {
+    final db = await database;
+    return await db.query(
+      'customers',
+      where: 'name LIKE ? OR phone LIKE ?',
+      whereArgs: ['%$keyword%', '%$keyword%'],
+      orderBy: 'name ASC',
+    );
   }
 
   // ==========================

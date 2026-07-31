@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/models/product.dart';
+import '../../core/database/database_helper.dart';
 import 'add_product_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
@@ -22,29 +23,42 @@ class _ProductListScreenState extends State<ProductListScreen>
     'All', 'Saree', 'Kurti', 'Lehenga', 'Suit', 'Dupatta', 'Gown'
   ];
 
-  final List<Product> _demoProducts = [
-    Product(id: 1, name: 'Kanjivaram Silk Saree', category: 'Saree', brand: 'Ravi Textiles',
-        color: 'Maroon', size: 'Free', mrp: 12000, sellingPrice: 10500,
-        purchasePrice: 8000, gst: 5, stock: 15, lowStockThreshold: 5),
-    Product(id: 2, name: 'Cotton Kurti - Block Print', category: 'Kurti', brand: 'Anita Collection',
-        color: 'Indigo', size: 'M/L/XL', mrp: 1200, sellingPrice: 950,
-        purchasePrice: 600, gst: 5, stock: 3, lowStockThreshold: 5),
-    Product(id: 3, name: 'Bridal Lehenga Set', category: 'Lehenga', brand: 'Manisha Collection',
-        color: 'Red & Gold', size: 'Custom', mrp: 45000, sellingPrice: 38000,
-        purchasePrice: 28000, gst: 12, stock: 2, lowStockThreshold: 3),
-    Product(id: 4, name: 'Georgette Dupatta', category: 'Dupatta', brand: 'Generic',
-        color: 'Pink', size: 'Free', mrp: 800, sellingPrice: 650,
-        purchasePrice: 350, gst: 5, stock: 25, lowStockThreshold: 8),
-    Product(id: 5, name: 'Salwar Suit Set', category: 'Suit', brand: 'Jaipur Fabrics',
-        color: 'Sky Blue', size: 'S/M/L', mrp: 3500, sellingPrice: 2800,
-        purchasePrice: 1800, gst: 5, stock: 0, lowStockThreshold: 5),
-    Product(id: 6, name: 'Anarkali Gown', category: 'Gown', brand: 'Designer Collection',
-        color: 'Teal', size: 'M/L', mrp: 5500, sellingPrice: 4200,
-        purchasePrice: 3000, gst: 12, stock: 8, lowStockThreshold: 3),
-  ];
+  List<Product> _dbProducts = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _categories.length, vsync: this);
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    final data = await DatabaseHelper.instance.getProducts(limit: 100);
+    final products = data.map<Product>((json) {
+      return Product(
+        id: json['id'],
+        name: json['product_name'] ?? '',
+        category: json['category'] ?? '',
+        mrp: (json['selling_price'] as num?)?.toDouble() ?? 0.0,
+        purchasePrice: (json['purchase_rate'] as num?)?.toDouble() ?? 0.0,
+        sellingPrice: (json['selling_price'] as num?)?.toDouble() ?? 0.0,
+        stock: json['quantity'] ?? 0,
+        lowStockThreshold: json['low_stock_limit'] ?? 5,
+        brand: json['supplier_name'] ?? '',
+      );
+    }).toList();
+    
+    if (mounted) {
+      setState(() {
+        _dbProducts = products;
+        _isLoading = false;
+      });
+    }
+  }
 
   List<Product> get _filtered {
-    var list = _demoProducts;
+    var list = _dbProducts;
     if (_selectedCategory != 'All') {
       list = list.where((p) => p.category == _selectedCategory).toList();
     }
@@ -54,12 +68,6 @@ class _ProductListScreenState extends State<ProductListScreen>
           .toList();
     }
     return list;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: _categories.length, vsync: this);
   }
 
   @override
@@ -177,12 +185,14 @@ class _ProductListScreenState extends State<ProductListScreen>
 
           // Product Grid / List
           Expanded(
-            child: _filtered.isEmpty
-                ? _buildEmptyState()
-                : AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: _isGridView ? _buildGrid() : _buildList(),
-                  ),
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
+                : _filtered.isEmpty
+                    ? _buildEmptyState()
+                    : AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: _isGridView ? _buildGrid() : _buildList(),
+                      ),
           ),
         ],
       ),

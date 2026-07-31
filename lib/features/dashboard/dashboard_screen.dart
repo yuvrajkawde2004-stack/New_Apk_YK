@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import 'providers/dashboard_provider.dart';
 import '../products/product_list_screen.dart';
 import '../billing/billing_screen.dart';
@@ -57,13 +58,24 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: _pages[_selectedIndex],
+    return PopScope(
+      canPop: _selectedIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _pages[_selectedIndex],
+        ),
+        bottomNavigationBar: _buildBottomNav(context),
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -76,10 +88,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final navBgColor = Theme.of(context).cardTheme.color ?? Colors.white;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: navBgColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -94,11 +108,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(0, Icons.home_rounded, 'Home'),
-              _navItem(1, Icons.inventory_2_rounded, 'Inventory'),
-              _premiumCustomerNavItem(2, 'Customers'),
-              _navItem(3, Icons.analytics_rounded, 'Reports'),
-              _navItem(4, Icons.settings_rounded, 'Settings'),
+              _navItem(0, Icons.home_rounded, loc.translate('home')),
+              _navItem(1, Icons.inventory_2_rounded, loc.translate('inventory')),
+              _premiumCustomerNavItem(2, loc.translate('customers')),
+              _navItem(3, Icons.analytics_rounded, loc.translate('reports')),
+              _navItem(4, Icons.settings_rounded, loc.translate('settings')),
             ],
           ),
         ),
@@ -266,13 +280,27 @@ class _HomeTab extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              const Text(
-                                'Manisha Collection',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimaryLight,
-                                ),
+                              Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.asset(
+                                      'assets/images/logo.png',
+                                      width: 28,
+                                      height: 28,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'RetailFlow',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimaryLight,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -540,19 +568,7 @@ class _HomeTab extends StatelessWidget {
 
                       const SizedBox(height: 24),
 
-                      // 5. QUICK ACTIONS
-                      const Text(
-                        'Quick Actions',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimaryLight,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildQuickActions(context),
 
-                      const SizedBox(height: 24),
 
                       // 6. LAST TRANSACTIONS (Matching Screenshot)
                       Row(
@@ -702,58 +718,7 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    final actions = [
-      _ActionItem('Products', Icons.checkroom_rounded, AppColors.royalBlue,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductListScreen()))),
-      _ActionItem('Customers', Icons.people_alt_rounded, AppColors.emeraldGreen,
-          onNavigateToCustomers),
-      _ActionItem('Billing', Icons.receipt_long_rounded, AppColors.softOrange,
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BillingScreen()))),
-      _ActionItem('Reports', Icons.bar_chart_rounded, AppColors.purpleAccent, () {}),
-    ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: actions.asMap().entries.map((e) {
-          final i = e.key;
-          final a = e.value;
-          return Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: GestureDetector(
-              onTap: a.onTap,
-              child: Column(
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [a.color.withValues(alpha: 0.15), a.color.withValues(alpha: 0.05)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: a.color.withValues(alpha: 0.3)),
-                    ),
-                    child: Icon(a.icon, color: a.color, size: 26),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(a.label,
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondaryLight)),
-                ],
-              ).animate().slideX(delay: (100 * (i + 1)).ms, begin: 0.4, end: 0).fadeIn(),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 
   Widget _buildRecentBills(BuildContext context) {
     final demoData = [

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/customer.dart';
+import '../../core/database/database_helper.dart';
 import 'customer_profile_screen.dart';
 
 class CustomerListScreen extends StatefulWidget {
@@ -21,32 +23,49 @@ class CustomerListScreen extends StatefulWidget {
 class _CustomerListScreenState extends State<CustomerListScreen> {
   String _searchQuery = '';
 
-  final List<Customer> _demoCustomers = const [
-    Customer(id: 1, name: 'Priya Sharma', phone: '9876543210', outstandingBalance: 2500,
-        notes: 'Prefers silk sarees'),
-    Customer(id: 2, name: 'Rahul Mehta', phone: '9123456789', outstandingBalance: 0,
-        notes: 'Regular customer'),
-    Customer(id: 3, name: 'Sunita Devi', phone: '9345678901', outstandingBalance: 8750,
-        notes: 'Wedding shopping'),
-    Customer(id: 4, name: 'Anjali Gupta', phone: '9456789012', outstandingBalance: 0,
-        notes: ''),
-    Customer(id: 5, name: 'Meera Joshi', phone: '9567890123', outstandingBalance: 1200,
-        notes: 'Bulk buyer'),
-  ];
+  List<Customer> _dbCustomers = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomers();
+  }
+
+  Future<void> _loadCustomers() async {
+    final data = await DatabaseHelper.instance.getCustomers();
+    final customers = data.map<Customer>((json) {
+      return Customer(
+        id: json['id'],
+        name: json['name'] ?? '',
+        phone: json['phone'] ?? '',
+        notes: json['address'],
+        outstandingBalance: (json['outstanding_balance'] as num?)?.toDouble() ?? 0.0,
+      );
+    }).toList();
+    
+    if (mounted) {
+      setState(() {
+        _dbCustomers = customers;
+        _isLoading = false;
+      });
+    }
+  }
 
   List<Customer> get _filtered {
-    if (_searchQuery.isEmpty) return _demoCustomers;
-    return _demoCustomers.where((c) =>
+    if (_searchQuery.isEmpty) return _dbCustomers;
+    return _dbCustomers.where((c) =>
         c.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
         (c.phone?.contains(_searchQuery) ?? false)).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('All Customers'),
+        title: Text(loc.translate('customers')),
         automaticallyImplyLeading: !widget.isEmbedded,
         leading: widget.isEmbedded
             ? null
@@ -89,10 +108,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: Row(
               children: [
-                _summaryChip('${_demoCustomers.length} Total', AppColors.royalBlue),
+                _summaryChip('${_dbCustomers.length} Total', AppColors.royalBlue),
                 const SizedBox(width: 10),
                 _summaryChip(
-                    '${_demoCustomers.where((c) => c.outstandingBalance > 0).length} Due',
+                    '${_dbCustomers.where((c) => c.outstandingBalance > 0).length} Due',
                     AppColors.softOrange),
               ],
             ).animate().fadeIn(),
@@ -120,12 +139,14 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
           // List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              physics: const BouncingScrollPhysics(),
-              itemCount: _filtered.length,
-              itemBuilder: (_, i) => _CustomerCard(customer: _filtered[i], index: i),
-            ),
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: _filtered.length,
+                    itemBuilder: (_, i) => _CustomerCard(customer: _filtered[i], index: i),
+                  ),
           ),
         ],
       ),
@@ -150,7 +171,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _AddCustomerSheet(),
+      builder: (_) => _AddCustomerSheet(
+        onSaved: () {
+          _loadCustomers();
+        },
+      ),
     );
   }
 }
@@ -264,9 +289,9 @@ class _CustomerCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _iconBtn(Icons.call_rounded, AppColors.emeraldGreen),
+                  _iconBtn(Icons.chat_bubble_rounded, const Color(0xFF25D366)),
                   const SizedBox(width: 6),
-                  _iconBtn(Icons.chat_rounded, AppColors.royalBlue),
+                  _iconBtn(Icons.message_rounded, AppColors.royalBlue),
                 ],
               ),
             ],
@@ -290,8 +315,38 @@ class _CustomerCard extends StatelessWidget {
   }
 }
 
-class _AddCustomerSheet extends StatelessWidget {
-  const _AddCustomerSheet();
+class _AddCustomerSheet extends StatefulWidget {
+  final VoidCallback onSaved;
+  const _AddCustomerSheet({required this.onSaved});
+
+  @override
+  State<_AddCustomerSheet> createState() => _AddCustomerSheetState();
+}
+
+class _AddCustomerSheetState extends State<_AddCustomerSheet> {
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+  bool _isSaving = false;
+
+  Future<void> _saveCustomer() async {
+    if (_nameCtrl.text.isEmpty || _phoneCtrl.text.isEmpty) return;
+    
+    setState(() => _isSaving = true);
+    
+    await DatabaseHelper.instance.addCustomer({
+      'name': _nameCtrl.text.trim(),
+      'phone': _phoneCtrl.text.trim(),
+      'address': _notesCtrl.text.trim(), // Storing notes as address for now
+      'outstanding_balance': 0.0,
+      'total_spent': 0.0,
+    });
+    
+    if (mounted) {
+      widget.onSaved();
+      Navigator.pop(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -308,29 +363,32 @@ class _AddCustomerSheet extends StatelessWidget {
           const Text('Add New Customer',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
-          _inputField('Full Name', Icons.person_outline_rounded),
+          _inputField('Full Name', Icons.person_outline_rounded, _nameCtrl),
           const SizedBox(height: 14),
-          _inputField('Phone Number', Icons.phone_outlined, TextInputType.phone),
+          _inputField('Phone Number', Icons.phone_outlined, _phoneCtrl, TextInputType.phone),
           const SizedBox(height: 14),
-          _inputField('Notes (optional)', Icons.note_outlined),
+          _inputField('Notes (optional)', Icons.note_outlined, _notesCtrl),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _isSaving ? null : _saveCustomer,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 52),
               backgroundColor: AppColors.royalBlue,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('Save Customer',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: _isSaving 
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('Save Customer',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  Widget _inputField(String label, IconData icon, [TextInputType? type]) {
+  Widget _inputField(String label, IconData icon, TextEditingController controller, [TextInputType? type]) {
     return TextField(
+      controller: controller,
       keyboardType: type,
       decoration: InputDecoration(
         labelText: label,

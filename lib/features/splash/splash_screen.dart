@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             // Logo Container with Glassmorphism Effect
             Container(
-              padding: const EdgeInsets.all(28),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.15),
@@ -48,10 +48,14 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.checkroom_rounded,
-                size: 88,
-                color: Colors.white,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(100),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.contain,
+                ),
               ),
             )
                 .animate()
@@ -61,10 +65,10 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 36),
 
             Text(
-              'Manisha Collection',
+              'RetailFlow',
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: 34,
                     letterSpacing: 1.5,
                     fontWeight: FontWeight.bold,
                   ),
@@ -76,10 +80,11 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 10),
 
             Text(
-              'Premium Retail Management',
+              'Smart Billing. Smarter Inventory.',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: 0.9),
                     letterSpacing: 0.5,
+                    fontWeight: FontWeight.w500,
                   ),
             )
                 .animate()

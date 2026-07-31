@@ -57,7 +57,7 @@ class PdfInvoiceService {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                'MANISHA COLLECTION',
+                'RETAILFLOW',
                 style: pw.TextStyle(color: maroon, fontSize: 24, fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 4),
@@ -185,7 +185,7 @@ class PdfInvoiceService {
                 color: PdfColors.grey200,
                 child: pw.BarcodeWidget(
                   barcode: pw.Barcode.qrCode(),
-                  data: 'upi://pay?pa=manisha@upi&pn=ManishaCollection&am=$grandTotal',
+                  data: 'upi://pay?pa=retailflow@upi&pn=RetailFlow&am=$grandTotal',
                   color: darkGrey,
                   width: 80,
                   height: 80,

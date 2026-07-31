@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/providers/locale_provider.dart';
-import '../../core/services/cloudflare_api_service.dart';
-import '../../core/services/sync_service.dart';
+import '../../core/providers/theme_provider.dart';
 import 'shop_profile_modal.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,18 +17,29 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _darkMode = false;
   bool _pinLock = false;
   bool _fingerprint = false;
   bool _notifications = true;
-  bool _autoCloudflareBackup = true;
-  String _selectedPaperSize = 'A4 (Full Page)';
-  String _selectedA4Template = 'Royal Blue & Gold';
+  String _selectedTemplate = 'Premium Gold';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _selectedTemplate = prefs.getString('invoice_template') ?? 'Premium Gold';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final localeProvider = Provider.of<LocaleProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -52,69 +63,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 🖨️ 2. A4 & INVOICE PRINT SETTINGS (NEW ENHANCED OPTIONS)
-              _sectionTitle('A4 INVOICE & PRINTER SETTINGS'),
+              // 🖨️ 2. PREMIUM INVOICE STUDIO
+              _sectionTitle('PREMIUM INVOICE STUDIO'),
               const SizedBox(height: 12),
               _buildCard([
                 _settingTile(
-                  icon: Icons.picture_as_pdf_rounded,
-                  color: AppColors.royalBlue,
-                  title: 'A4 Bill Customization & Layout',
-                  subtitle: 'Format: $_selectedPaperSize • Theme: $_selectedA4Template',
-                  onTap: () => _showA4PrintSettingsSheet(context),
+                  icon: Icons.brush_rounded,
+                  color: const Color(0xFFD4AF37), // Classic Gold
+                  title: 'Premium Invoice Studio',
+                  subtitle: 'Current Theme: $_selectedTemplate',
+                  onTap: () => _showPremiumInvoiceStudioSheet(context),
                 ),
                 _divider(),
                 _settingTile(
                   icon: Icons.print_rounded,
                   color: const Color(0xFF0EA5E9),
-                  title: 'Thermal & A4 Printer Setup',
-                  subtitle: 'Bluetooth / Wi-Fi Desktop Printer Connected',
+                  title: 'Thermal Printer Setup',
+                  subtitle: 'Bluetooth / Wi-Fi Desktop Printer',
                   onTap: () => _showPrinterConnectionDialog(context),
-                ),
-                _divider(),
-                _switchTile(
-                  icon: Icons.cloud_upload_rounded,
-                  color: AppColors.emeraldGreen,
-                  title: 'Auto Cloudflare R2 PDF Backup',
-                  subtitle: 'Automatically backup generated A4 bills to Cloud',
-                  value: _autoCloudflareBackup,
-                  onChanged: (v) {
-                    setState(() => _autoCloudflareBackup = v);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          v ? 'Cloudflare R2 Auto PDF Backup Enabled!' : 'Auto Cloud Backup Disabled',
-                          style: GoogleFonts.outfit(),
-                        ),
-                        backgroundColor: v ? AppColors.emeraldGreen : AppColors.softOrange,
-                      ),
-                    );
-                  },
                 ),
               ], 100),
 
               const SizedBox(height: 24),
 
-              // 🔐 3. SECURITY & CLOUDFLARE SYNC
-              _sectionTitle('${loc.translate('security')} & CLOUD SYNC'),
+              // 🔐 3. SECURITY
+              _sectionTitle(loc.translate('security')),
               const SizedBox(height: 12),
               _buildCard([
-                _settingTile(
-                  icon: Icons.cloud_sync_rounded,
-                  color: const Color(0xFF8B5CF6),
-                  title: 'Cloudflare D1 Database Sync',
-                  subtitle: 'Last Synced: Just Now (SQLite + D1 Active)',
-                  onTap: () {
-                    SyncService().forceSync();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Synced with Cloudflare D1 Remote Database!', style: GoogleFonts.outfit()),
-                        backgroundColor: AppColors.emeraldGreen,
-                      ),
-                    );
-                  },
-                ),
-                _divider(),
                 _settingTile(
                   icon: Icons.currency_rupee_rounded,
                   color: AppColors.purpleAccent,
@@ -123,22 +98,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () {},
                 ),
                 _divider(),
-                _switchTile(
-                  icon: Icons.lock_rounded,
+                _settingTile(
+                  icon: Icons.security_rounded,
                   color: AppColors.royalBlue,
-                  title: loc.translate('pin_lock'),
-                  subtitle: 'Secure app with 4-digit PIN',
-                  value: _pinLock,
-                  onChanged: (v) => setState(() => _pinLock = v),
-                ),
-                _divider(),
-                _switchTile(
-                  icon: Icons.fingerprint_rounded,
-                  color: AppColors.emeraldGreen,
-                  title: loc.translate('fingerprint'),
-                  subtitle: 'Biometric authentication',
-                  value: _fingerprint,
-                  onChanged: (v) => setState(() => _fingerprint = v),
+                  title: 'App Security Lock',
+                  subtitle: _pinLock || _fingerprint ? 'Security Enabled' : 'Security Disabled',
+                  onTap: () => _showAppLockDialog(context),
                 ),
               ], 200),
 
@@ -155,15 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: _getLanguageName(localeProvider.locale.languageCode),
                   onTap: () => _showLanguageSelector(context, localeProvider),
                 ),
-                _divider(),
-                _switchTile(
-                  icon: Icons.dark_mode_rounded,
-                  color: const Color(0xFF6366F1),
-                  title: loc.translate('dark_mode'),
-                  subtitle: 'Switch to dark theme',
-                  value: _darkMode,
-                  onChanged: (v) => setState(() => _darkMode = v),
-                ),
+
                 _divider(),
                 _switchTile(
                   icon: Icons.notifications_rounded,
@@ -203,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: const Icon(Icons.info_outline_rounded, color: AppColors.textSecondaryLight),
                       ),
                       title: Text(loc.translate('about_app'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Manisha POS • Version 2.5.0 Pro', style: GoogleFonts.outfit(fontSize: 12)),
+                      subtitle: Text('RetailFlow POS • Version 2.5.0 Pro', style: GoogleFonts.outfit(fontSize: 12)),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () {},
                     ),
@@ -243,18 +200,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showA4PrintSettingsSheet(BuildContext context) {
+  void _showPremiumInvoiceStudioSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _A4PrintSettingsSheet(
-        paperSize: _selectedPaperSize,
-        template: _selectedA4Template,
-        onApply: (paper, tmpl) {
+      builder: (_) => _PremiumInvoiceStudioSheet(
+        currentTemplate: _selectedTemplate,
+        onApply: (tmpl) async {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('invoice_template', tmpl);
           setState(() {
-            _selectedPaperSize = paper;
-            _selectedA4Template = tmpl;
+            _selectedTemplate = tmpl;
           });
         },
       ),
@@ -350,6 +307,141 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showAppLockDialog(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.royalBlue.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.security_rounded,
+                    size: 64,
+                    color: AppColors.royalBlue,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'App Security Lock',
+                  style: GoogleFonts.outfit(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Protect your app using PIN or Fingerprint',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: AppColors.textSecondaryLight,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // PIN Lock Toggle
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundLight,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: SwitchListTile.adaptive(
+                    title: Text(
+                      loc.translate('pin_lock'),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Secure app with 4-digit PIN',
+                      style: GoogleFonts.outfit(fontSize: 12),
+                    ),
+                    value: _pinLock,
+                    activeColor: AppColors.royalBlue,
+                    onChanged: (val) {
+                      setState(() {
+                        _pinLock = val;
+                      });
+                      setModalState(() {});
+                    },
+                  ),
+                ),
+                
+                const SizedBox(height: 12),
+
+                // Fingerprint Toggle
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.backgroundLight,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: SwitchListTile.adaptive(
+                    title: Text(
+                      loc.translate('fingerprint'),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    subtitle: Text(
+                      _fingerprint ? loc.translate('fingerprint_enabled') : loc.translate('fingerprint_disabled'),
+                      style: GoogleFonts.outfit(fontSize: 12),
+                    ),
+                    value: _fingerprint,
+                    activeColor: AppColors.emeraldGreen,
+                    onChanged: (val) {
+                      setState(() {
+                        _fingerprint = val;
+                      });
+                      setModalState(() {});
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: AppColors.royalBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      loc.translate('close'),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildLuxuryShopCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -381,20 +473,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.6)),
                 ),
-                child: const Icon(Icons.storefront_rounded, color: Color(0xFFF59E0B), size: 32),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Manisha Collection',
+                    Text('RetailFlow',
                         style: GoogleFonts.outfit(
                             color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
                     const SizedBox(height: 2),
                     Text('GSTIN: 27AAAAA0000A1Z5',
                         style: GoogleFonts.outfit(
                             color: Colors.white.withValues(alpha: 0.7), fontSize: 12)),
+                    const SizedBox(height: 2),
+                    Text('User ID: usr_a1b2c3d4e5',
+                        style: GoogleFonts.outfit(
+                            color: const Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -502,57 +606,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// ───────────────────── A4 PRINT & INVOICE CUSTOMIZATION SHEET ─────────────────────
-class _A4PrintSettingsSheet extends StatefulWidget {
-  final String paperSize;
-  final String template;
-  final Function(String paper, String tmpl) onApply;
+// ───────────────────── PREMIUM INVOICE STUDIO SHEET ─────────────────────
+class _PremiumInvoiceStudioSheet extends StatefulWidget {
+  final String currentTemplate;
+  final Function(String tmpl) onApply;
 
-  const _A4PrintSettingsSheet({
-    required this.paperSize,
-    required this.template,
+  const _PremiumInvoiceStudioSheet({
+    required this.currentTemplate,
     required this.onApply,
   });
 
   @override
-  State<_A4PrintSettingsSheet> createState() => _A4PrintSettingsSheetState();
+  State<_PremiumInvoiceStudioSheet> createState() => _PremiumInvoiceStudioSheetState();
 }
 
-class _A4PrintSettingsSheetState extends State<_A4PrintSettingsSheet> {
-  late String _currentPaper;
-  late String _currentTemplate;
-  bool _showShopLogo = true;
-  bool _showTerms = true;
-  bool _showBankDetails = true;
-  bool _showUpiQr = true;
-  final TextEditingController _termsController =
-      TextEditingController(text: '1. Goods once sold will not be returned.\n2. Subject to local jurisdiction.');
-
-  final List<String> _paperSizes = [
-    'A4 (Full Page)',
-    'A5 (Half Page)',
-    'Thermal 80mm',
-    'Thermal 58mm',
-  ];
+class _PremiumInvoiceStudioSheetState extends State<_PremiumInvoiceStudioSheet> {
+  late String _selected;
 
   final List<String> _templates = [
-    'Royal Blue & Gold',
-    'Classic Minimalist',
-    'Emerald Fresh',
-    'Dark Luxury Edition',
+    'Premium Gold',
+    'Minimal Light',
+    'Royal Blue',
   ];
 
   @override
   void initState() {
     super.initState();
-    _currentPaper = widget.paperSize;
-    _currentTemplate = widget.template;
-  }
-
-  @override
-  void dispose() {
-    _termsController.dispose();
-    super.dispose();
+    _selected = widget.currentTemplate;
+    if (!_templates.contains(_selected)) _selected = _templates.first;
   }
 
   @override
@@ -575,13 +656,13 @@ class _A4PrintSettingsSheetState extends State<_A4PrintSettingsSheet> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.royalBlue.withValues(alpha: 0.1),
+                      color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.royalBlue),
+                    child: const Icon(Icons.brush_rounded, color: Color(0xFFD4AF37)),
                   ),
                   const SizedBox(width: 12),
-                  Text('A4 Invoice Customization',
+                  Text('Premium Invoice Studio',
                       style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -591,81 +672,50 @@ class _A4PrintSettingsSheetState extends State<_A4PrintSettingsSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-
-          // 1. Paper Size Selector
-          Text('Select Paper Format', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: _paperSizes.map((size) {
-              final sel = _currentPaper == size;
-              return ChoiceChip(
-                label: Text(size, style: GoogleFonts.outfit(fontSize: 12, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
-                selected: sel,
-                selectedColor: AppColors.royalBlue,
-                labelStyle: TextStyle(color: sel ? Colors.white : AppColors.textPrimaryLight),
-                onSelected: (val) {
-                  if (val) setState(() => _currentPaper = size);
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // 2. A4 Theme Template
-          Text('A4 Visual Design Template', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: _templates.map((tmpl) {
-              final sel = _currentTemplate == tmpl;
-              return ChoiceChip(
-                label: Text(tmpl, style: GoogleFonts.outfit(fontSize: 12, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
-                selected: sel,
-                selectedColor: const Color(0xFFF59E0B),
-                labelStyle: TextStyle(color: sel ? Colors.white : AppColors.textPrimaryLight),
-                onSelected: (val) {
-                  if (val) setState(() => _currentTemplate = tmpl);
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-
-          // 3. Toggles for Logo, Bank Details, Terms
-          SwitchListTile.adaptive(
-            dense: true,
-            title: Text('Include Shop Logo on A4 Header', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            value: _showShopLogo,
-            onChanged: (v) => setState(() => _showShopLogo = v),
-            activeColor: AppColors.royalBlue,
-          ),
-          SwitchListTile.adaptive(
-            dense: true,
-            title: Text('Include Bank Account & UPI QR Code', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            value: _showBankDetails,
-            onChanged: (v) => setState(() => _showBankDetails = v),
-            activeColor: AppColors.emeraldGreen,
-          ),
-          SwitchListTile.adaptive(
-            dense: true,
-            title: Text('Print Terms & Conditions at Bottom', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            value: _showTerms,
-            onChanged: (v) => setState(() => _showTerms = v),
-            activeColor: AppColors.royalBlue,
-          ),
-
+          const SizedBox(height: 12),
+          Text('Choose the visual design of your digital invoices.', 
+            style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 13)),
+          const SizedBox(height: 24),
+          
+          ..._templates.map((tmpl) {
+            final sel = _selected == tmpl;
+            return GestureDetector(
+              onTap: () => setState(() => _selected = tmpl),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: sel ? AppColors.royalBlue.withValues(alpha: 0.05) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: sel ? AppColors.royalBlue : Colors.grey.shade200, width: sel ? 2 : 1),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: sel ? AppColors.royalBlue : Colors.grey.shade400, width: sel ? 6 : 2),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(tmpl, style: GoogleFonts.outfit(fontWeight: sel ? FontWeight.bold : FontWeight.w500, fontSize: 16)),
+                  ],
+                ),
+              ),
+            );
+          }),
+          
           const SizedBox(height: 20),
 
           // Save & Apply Button
           ElevatedButton(
             onPressed: () {
-              widget.onApply(_currentPaper, _currentTemplate);
+              widget.onApply(_selected);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Saved A4 Print Settings: $_currentPaper ($_currentTemplate)', style: GoogleFonts.outfit()),
+                  content: Text('Applied Theme: $_selected', style: GoogleFonts.outfit()),
                   backgroundColor: AppColors.royalBlue,
                 ),
               );
@@ -677,7 +727,7 @@ class _A4PrintSettingsSheetState extends State<_A4PrintSettingsSheet> {
               elevation: 4,
             ),
             child: Text(
-              'Save & Apply A4 Settings',
+              'Save & Apply Theme',
               style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),

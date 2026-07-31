@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/providers/locale_provider.dart';
+import 'core/providers/theme_provider.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/auth/otp_login_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
@@ -32,25 +33,27 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: const ManishaCollectionApp(),
+      child: const RetailFlowApp(),
     ),
   );
 }
 
-class ManishaCollectionApp extends StatelessWidget {
-  const ManishaCollectionApp({super.key});
+class RetailFlowApp extends StatelessWidget {
+  const RetailFlowApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'Manisha Collection',
+      title: 'RetailFlow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
+      themeMode: themeProvider.themeMode,
       locale: localeProvider.locale,
       supportedLocales: const [
         Locale('en'),

@@ -1,6 +1,6 @@
 {
-    "name": "professional_cloth_shop",
-    "short_name": "professional_cloth_shop",
+    "name": "RetailFlow",
+    "short_name": "RetailFlow",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

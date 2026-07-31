@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 /// Flutter App -> Cloudflare Workers (Backend API) -> Cloudflare D1 (SQLite Database) -> Cloudflare R2 (PDF/Image Storage)
 class CloudflareApiService {
   // Base URL of the deployed Cloudflare Worker API
-  static const String baseUrl = 'https://manisha-collection-api.workers.dev';
+  static const String baseUrl = 'https://retailflow-api.workers.dev';
 
   // Toggle for offline fallback mode (uses fallback if network/Cloudflare worker is unreachable)
   static bool useOfflineFallback = false;
@@ -193,10 +193,10 @@ class CloudflareApiService {
         final body = jsonDecode(response.body);
         return body['file_url'] as String?;
       }
-      return 'https://r2.manishacollection.com/$filename';
+      return 'https://r2.retailflow.com/$filename';
     } catch (e) {
       debugPrint('Cloudflare R2 Upload error: $e');
-      return 'https://r2.manishacollection.com/$filename';
+      return 'https://r2.retailflow.com/$filename';
     }
   }
 }

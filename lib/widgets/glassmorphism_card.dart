@@ -38,7 +38,7 @@ class GlassmorphismCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 1,
           )
@@ -51,10 +51,10 @@ class GlassmorphismCard extends StatelessWidget {
           child: Container(
             padding: padding ?? const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: baseColor.withOpacity(opacity),
+              color: baseColor.withValues(alpha: opacity),
               borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(
-                color: baseColor.withOpacity(opacity + 0.1),
+                color: baseColor.withValues(alpha: (opacity + 0.1).clamp(0.0, 1.0)),
                 width: 1.5,
               ),
             ),

@@ -35,7 +35,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       // Direct demo login fallback
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Welcome back to Manisha Collection!'),
+          content: Text('Welcome back to RetailFlow!'),
           backgroundColor: AppColors.emeraldGreen,
         ),
       );
@@ -132,9 +132,9 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const SizedBox(height: 10),
-                              // Abstract Modern Logo Icon (matching design)
+                              // RetailFlow Logo Image
                               Container(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.25),
                                   borderRadius: BorderRadius.circular(24),
@@ -150,23 +150,14 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                                     ),
                                   ],
                                 ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: const Icon(
-                                        Icons.checkroom_rounded,
-                                        color: Color(0xFF10B981),
-                                        size: 32,
-                                      ),
-                                    ),
-                                  ],
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Image.asset(
+                                    'assets/images/logo.png',
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
                               )
                                   .animate()
@@ -176,7 +167,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                               const SizedBox(height: 14),
 
                               Text(
-                                'Manisha Collection',
+                                'RetailFlow',
                                 style: GoogleFonts.outfit(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
