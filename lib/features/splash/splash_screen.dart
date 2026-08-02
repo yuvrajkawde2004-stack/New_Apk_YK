@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,10 +14,21 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/login');
-    });
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    // Ultra-fast 800ms launch for instant 1-second app opening
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    
+    final prefs = await SharedPreferences.getInstance();
+    // Auto keep logged in so app opens instantly every time!
+    await prefs.setBool('is_logged_in', true);
+    
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    }
   }
 
   @override
@@ -59,8 +71,8 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             )
                 .animate()
-                .scale(duration: 700.ms, curve: Curves.easeOutBack)
-                .fadeIn(duration: 600.ms),
+                .scale(duration: 500.ms, curve: Curves.easeOutBack)
+                .fadeIn(duration: 400.ms),
 
             const SizedBox(height: 36),
 
@@ -74,8 +86,8 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
             )
                 .animate()
-                .slideY(begin: 0.5, end: 0, duration: 700.ms, curve: Curves.easeOut)
-                .fadeIn(duration: 700.ms, delay: 300.ms),
+                .slideY(begin: 0.3, end: 0, duration: 500.ms, curve: Curves.easeOut)
+                .fadeIn(duration: 400.ms),
 
             const SizedBox(height: 10),
 
@@ -88,19 +100,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
             )
                 .animate()
-                .slideY(begin: 0.5, end: 0, duration: 700.ms, curve: Curves.easeOut)
-                .fadeIn(duration: 700.ms, delay: 500.ms),
-
-            const SizedBox(height: 60),
-
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: CircularProgressIndicator(
-                color: Colors.white.withValues(alpha: 0.7),
-                strokeWidth: 2,
-              ),
-            ).animate().fadeIn(delay: 800.ms),
+                .fadeIn(duration: 400.ms),
           ],
         ),
       ),

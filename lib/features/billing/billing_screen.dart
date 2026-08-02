@@ -16,14 +16,17 @@ import '../../core/models/product.dart';
 import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
 import '../dashboard/providers/dashboard_provider.dart';
+import 'templates/invoice_template_classic_gst.dart';
 import 'templates/invoice_template_premium_gold.dart';
-import 'templates/invoice_template_minimal_light.dart';
-import 'templates/invoice_template_royal_blue.dart';
+import 'templates/invoice_template_modern_emerald.dart';
+import 'templates/invoice_template_royal_violet.dart';
+import 'templates/invoice_template_minimal_slate.dart';
 
 class BillingScreen extends StatefulWidget {
   final Customer? customer;
+  final Map<String, dynamic>? billToEdit;
 
-  const BillingScreen({super.key, this.customer});
+  const BillingScreen({super.key, this.customer, this.billToEdit});
 
   @override
   State<BillingScreen> createState() => _BillingScreenState();
@@ -54,10 +57,10 @@ class _BillingScreenState extends State<BillingScreen> {
   final List<_BillItem> _items = [];
   late Customer? _selectedCustomer;
   String _paymentMethod = 'Cash';
-  double _discount = 0;
   bool _isProcessing = false;
   final TextEditingController _searchCtrl = TextEditingController();
-  final TextEditingController _discountCtrl = TextEditingController(text: '0');
+  final TextEditingController _paidAmountCtrl = TextEditingController();
+  bool _isManualPaidAmount = false;
 
   final List<String> _paymentMethods = ['Cash', 'UPI', 'Card', 'Credit'];
 
@@ -66,8 +69,42 @@ class _BillingScreenState extends State<BillingScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedCustomer = widget.customer ?? Customer(id: 1, name: 'Walk-in Customer', phone: 'N/A', outstandingBalance: 0);
+    if (widget.billToEdit != null) {
+      _loadBillToEdit();
+    } else {
+      _selectedCustomer = widget.customer ?? Customer(id: 1, name: 'Walk-in Customer', phone: 'N/A', outstandingBalance: 0);
+    }
     _loadProducts();
+  }
+
+  Future<void> _loadBillToEdit() async {
+    final bill = widget.billToEdit!;
+    _selectedCustomer = Customer(
+      id: bill['customer_id'] ?? 1,
+      name: bill['customer_name'] ?? 'Walk-in Customer',
+      phone: bill['customer_mobile'] ?? 'N/A',
+      outstandingBalance: 0, // Not perfectly accurate but we mostly need ID and Name here
+    );
+    _paymentMethod = bill['payment_method'] ?? 'Cash';
+    
+    final paidAmt = (bill['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    _paidAmountCtrl.text = paidAmt > 0 ? paidAmt.toStringAsFixed(0) : '';
+    if (paidAmt > 0) _isManualPaidAmount = true;
+
+    // Load items
+    final billId = bill['id'] is int ? bill['id'] as int : int.tryParse(bill['id'].toString()) ?? 0;
+    final itemsData = await DatabaseHelper.instance.getBillItems(billId);
+    
+    setState(() {
+      for (final item in itemsData) {
+        _items.add(_BillItem(
+          product: null, // We don't link full Product objects back unless we search for it, but for editing existing items we just need name and price
+          name: item['product_name'] ?? '',
+          qty: item['quantity'] ?? 1,
+          price: (item['price'] as num?)?.toDouble() ?? 0.0,
+        ));
+      }
+    });
   }
 
   Future<void> _loadProducts() async {
@@ -105,7 +142,16 @@ class _BillingScreenState extends State<BillingScreen> {
 
   double get _subtotal => _items.fold(0, (s, i) => s + i.total);
   double get _gstAmount => _items.fold(0, (s, i) => s + (i.total * (i.product?.gst ?? 0) / 100)); // GST 0 if custom
-  double get _grandTotal => (_subtotal + _gstAmount - _discount).clamp(0.0, double.infinity);
+  double get _grandTotal => (_subtotal + _gstAmount).clamp(0.0, double.infinity);
+
+  double get _paidAmount {
+    if (!_isManualPaidAmount || _paidAmountCtrl.text.trim().isEmpty) {
+      return _grandTotal;
+    }
+    return double.tryParse(_paidAmountCtrl.text.trim()) ?? _grandTotal;
+  }
+
+  double get _dueAmount => (_grandTotal - _paidAmount).clamp(0.0, double.infinity);
 
   void _addItem(Product? p, {String? customName}) {
     setState(() {
@@ -114,14 +160,162 @@ class _BillingScreenState extends State<BillingScreen> {
         if (existing.isNotEmpty) {
           existing.first.qty++;
         } else {
-          _items.insert(0, _BillItem(product: p, name: p.name));
+          _items.insert(0, _BillItem(product: p, name: p.name, price: p.sellingPrice));
         }
-      } else if (customName != null && customName.isNotEmpty) {
-        _items.insert(0, _BillItem(product: null, name: customName));
+      } else if (customName != null && customName.trim().isNotEmpty) {
+        final cleanName = customName.trim();
+        _items.insert(0, _BillItem(product: null, name: cleanName, price: 0));
       }
     });
     _searchCtrl.clear();
     FocusScope.of(context).unfocus();
+  }
+
+  Future<void> _showCustomerSelectionSheet() async {
+    final rawData = await DatabaseHelper.instance.getCustomers();
+    final customers = rawData.map<Customer>((json) {
+      return Customer(
+        id: json['id'],
+        name: json['name'] ?? '',
+        phone: json['phone'] ?? '',
+        notes: json['address'],
+        outstandingBalance: (json['outstanding_balance'] as num?)?.toDouble() ?? 0.0,
+      );
+    }).toList();
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Select Customer / ग्राहक निवडा', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tileColor: AppColors.backgroundLight,
+              leading: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person_off_rounded, color: Colors.grey)),
+              title: Text('Walk-in Customer (साधा ग्राहक)', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              onTap: () {
+                setState(() => _selectedCustomer = null);
+                Navigator.pop(ctx);
+              },
+            ),
+            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
+            Expanded(
+              child: customers.isEmpty
+                  ? Center(child: Text('No customers found.', style: GoogleFonts.outfit(color: Colors.grey)))
+                  : ListView.separated(
+                      itemCount: customers.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (ctx, i) {
+                        final c = customers[i];
+                        final isSel = _selectedCustomer?.id == c.id;
+                        return ListTile(
+                          selected: isSel,
+                          selectedTileColor: AppColors.royalBlue.withValues(alpha: 0.05),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                            child: Text(c.name[0].toUpperCase(), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.royalBlue)),
+                          ),
+                          title: Text(c.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                          subtitle: Text(c.phone ?? '', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 12)),
+                          trailing: c.outstandingBalance > 0
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                                  child: Text('Due: ₹${c.outstandingBalance.toStringAsFixed(0)}', style: GoogleFonts.outfit(color: Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.bold)),
+                                )
+                              : const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                          onTap: () {
+                            setState(() => _selectedCustomer = c);
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showProductSelectionSheet() async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.inventory_2_rounded, color: AppColors.royalBlue),
+                    const SizedBox(width: 10),
+                    Text('Select Product / प्रॉडक्ट निवडा', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _dbProducts.isEmpty
+                  ? Center(child: Text('No stock items in inventory.', style: GoogleFonts.outfit(color: Colors.grey)))
+                  : ListView.separated(
+                      itemCount: _dbProducts.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (ctx, i) {
+                        final p = _dbProducts[i];
+                        return ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: AppColors.royalBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                            child: const Icon(Icons.shopping_bag_outlined, color: AppColors.royalBlue),
+                          ),
+                          title: Text(p.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Stock: ${p.stock} Pcs • Selling Rate: ₹${p.sellingPrice.toStringAsFixed(0)}',
+                              style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                          trailing: const Icon(Icons.add_circle_rounded, color: AppColors.emeraldGreen, size: 24),
+                          onTap: () {
+                            _addItem(p);
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _removeItem(int index) {
@@ -132,10 +326,21 @@ class _BillingScreenState extends State<BillingScreen> {
   }
 
   Future<void> _processPayment() async {
+    // If cart is empty but user typed a product in search bar, auto add it!
+    if (_items.isEmpty && _searchCtrl.text.trim().isNotEmpty) {
+      final text = _searchCtrl.text.trim();
+      final matches = _searchResults;
+      if (matches.isNotEmpty) {
+        _addItem(matches.first);
+      } else {
+        _addItem(null, customName: text);
+      }
+    }
+
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please select at least one product for billing', style: GoogleFonts.outfit()),
+          content: Text('कृपया बिलात प्रॉडक्ट सेलेक्ट करा किंवा टाईप करा (Select or Type Product)', style: GoogleFonts.outfit()),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -147,7 +352,7 @@ class _BillingScreenState extends State<BillingScreen> {
     if (_items.any((i) => i.price <= 0)) {
        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please enter a valid price for all items.', style: GoogleFonts.outfit()),
+          content: Text('कृपया प्रॉडक्टची किंमत (Price) टाका.', style: GoogleFonts.outfit()),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -158,18 +363,28 @@ class _BillingScreenState extends State<BillingScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final billNo = await DatabaseHelper.instance.generateBillNumber();
+      final prefs = await SharedPreferences.getInstance();
+      final isEdit = widget.billToEdit != null;
+      final billNo = isEdit ? widget.billToEdit!['bill_number'] : await DatabaseHelper.instance.generateBillNumber();
+      
       final billData = {
         'bill_number': billNo,
+        'customer_id': _selectedCustomer?.id,
         'customer_name': _selectedCustomer?.name ?? 'Walk-in Customer',
         'customer_mobile': _selectedCustomer?.phone ?? '',
+        'shop_name': prefs.getString('shop_name') ?? 'RetailFlow Cloth Shop',
+        'shop_gstin': prefs.getString('shop_gstin') ?? '27AADCB2230M1Z2',
+        'shop_address': prefs.getString('shop_address') ?? '123 Main Street, Market Area',
+        'shop_phone': prefs.getString('shop_phone') ?? '+91 99422 20307',
         'subtotal': _subtotal,
-        'discount': _discount,
+        'discount': 0.0,
         'gst': _gstAmount,
         'grand_total': _grandTotal,
+        'paid_amount': _paidAmount,
+        'due_amount': _dueAmount,
         'payment_method': _paymentMethod,
-        'bill_date': DateTime.now().toIso8601String(),
-        'created_at': DateTime.now().toIso8601String(),
+        'bill_date': isEdit ? widget.billToEdit!['bill_date'] : DateTime.now().toIso8601String(),
+        'created_at': isEdit ? widget.billToEdit!['created_at'] : DateTime.now().toIso8601String(),
       };
 
       final itemsData = _items.map((i) => {
@@ -180,7 +395,20 @@ class _BillingScreenState extends State<BillingScreen> {
         'total': i.total,
       }).toList();
 
-      await DatabaseHelper.instance.createCompleteBill(billData, itemsData);
+      if (isEdit) {
+        final billId = widget.billToEdit!['id'] is int ? widget.billToEdit!['id'] as int : int.tryParse(widget.billToEdit!['id'].toString()) ?? 0;
+        await DatabaseHelper.instance.updateCompleteBill(billId, billData, itemsData);
+      } else {
+        await DatabaseHelper.instance.createCompleteBill(billData, itemsData);
+      }
+
+      // Update customer dues if balance remains and we just created a NEW customer bill 
+      // (For edits, updateCompleteBill handles it perfectly!)
+      if (!isEdit && _dueAmount > 0 && _selectedCustomer != null && _selectedCustomer!.id != null) {
+        // We only do this for new bills because createCompleteBill doesn't actually do this if the customer already exists! 
+        // Wait, createCompleteBill DOES update outstanding_balance. We don't need this extra call.
+        // Let's remove the redundant updateCustomerDues call to prevent double addition.
+      }
 
       if (mounted) {
         Provider.of<DashboardProvider>(context, listen: false).refreshDashboard();
@@ -193,7 +421,15 @@ class _BillingScreenState extends State<BillingScreen> {
       
     } catch (e) {
       debugPrint('Bill save error: $e');
-      if (mounted) setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bill save error: $e', style: GoogleFonts.outfit()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -214,10 +450,14 @@ class _BillingScreenState extends State<BillingScreen> {
             final tmpl = snapshot.data!.getString('invoice_template') ?? 'Premium Gold';
             
             Widget invoiceWidget;
-            if (tmpl == 'Minimal Light') {
-              invoiceWidget = InvoiceTemplateMinimalLight(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Royal Blue') {
-              invoiceWidget = InvoiceTemplateRoyalBlue(billData: billData, itemsData: itemsData);
+            if (tmpl == 'Classic GST') {
+              invoiceWidget = InvoiceTemplateClassicGst(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Modern Emerald') {
+              invoiceWidget = InvoiceTemplateModernEmerald(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Royal Violet') {
+              invoiceWidget = InvoiceTemplateRoyalViolet(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Minimal Slate') {
+              invoiceWidget = InvoiceTemplateMinimalSlate(billData: billData, itemsData: itemsData);
             } else {
               invoiceWidget = InvoiceTemplatePremiumGold(billData: billData, itemsData: itemsData);
             }
@@ -241,8 +481,6 @@ class _BillingScreenState extends State<BillingScreen> {
                           Navigator.pop(context);
                           setState(() {
                             _items.clear();
-                            _discount = 0;
-                            _discountCtrl.text = '0';
                           });
                         }
                       ),
@@ -266,34 +504,55 @@ class _BillingScreenState extends State<BillingScreen> {
                   ),
                   
                   const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          final image = await screenshotController.capture(pixelRatio: 2.0);
-                          if (image == null) return;
-                          
-                          final directory = await getTemporaryDirectory();
-                          final imagePath = await File('${directory.path}/invoice_${billData['bill_number']}.png').create();
-                          await imagePath.writeAsBytes(image);
-                          
-                          await Share.shareXFiles(
-                            [XFile(imagePath.path)], 
-                            text: 'Hello ${billData['customer_name']},\n\nHere is your invoice for ₹${billData['grand_total']}.\nThank you for your business!'
-                          );
-                        } catch (e) {
-                          debugPrint('Error sharing: $e');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            setState(() {
+                              _items.clear();
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 52),
+                            side: BorderSide(color: Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: Text('Done & Close', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      icon: const Icon(Icons.share_rounded, color: Colors.white),
-                      label: Text('Share on WhatsApp', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            try {
+                              final image = await screenshotController.capture(pixelRatio: 2.0);
+                              if (image == null) return;
+                              
+                              final directory = await getTemporaryDirectory();
+                              final imagePath = await File('${directory.path}/invoice_${billData['bill_number']}.png').create();
+                              await imagePath.writeAsBytes(image);
+                              
+                              await Share.shareXFiles(
+                                [XFile(imagePath.path)], 
+                                text: 'Hello ${billData['customer_name']},\n\nHere is your invoice for ₹${billData['grand_total']}.\nThank you for your business!'
+                              );
+                            } catch (e) {
+                              debugPrint('Error sharing: $e');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 52),
+                            backgroundColor: const Color(0xFF25D366),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                          label: Text('Share WhatsApp', style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                        ).animate().scale(begin: const Offset(0.98, 0.98), end: const Offset(1.0, 1.0), duration: 300.ms),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -307,7 +566,7 @@ class _BillingScreenState extends State<BillingScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _discountCtrl.dispose();
+    _paidAmountCtrl.dispose();
     for (var i in _items) { i.dispose(); }
     super.dispose();
   }
@@ -322,78 +581,84 @@ class _BillingScreenState extends State<BillingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 🌟 Premium Glassmorphism Header
+            // 🌟 Premium White Header
             Container(
               margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                 boxShadow: [
-                  BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 10)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                                child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                              ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 18),
                             ),
-                            const SizedBox(width: 16),
-                            Text('Premium Invoice', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
-                              ),
-                              child: Text('PRO', style: GoogleFonts.outfit(color: const Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1)),
+                          ),
+                          const SizedBox(width: 16),
+                          Text('Premium Invoice', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
                             ),
-                          ],
+                            child: Text('PRO', style: GoogleFonts.outfit(color: const Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      GestureDetector(
+                        onTap: _showCustomerSelectionSheet,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppColors.royalBlue.withValues(alpha: 0.15),
+                                child: Text((_selectedCustomer?.name.isNotEmpty == true) ? _selectedCustomer!.name[0].toUpperCase() : 'C',
+                                    style: GoogleFonts.outfit(color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontSize: 18)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_selectedCustomer?.name ?? 'Select Customer (Walk-in)',
+                                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15)),
+                                    const SizedBox(height: 2),
+                                    Text(_selectedCustomer?.phone ?? 'Tap here to pick customer from list ▾',
+                                        style: GoogleFonts.outfit(color: AppColors.royalBlue, fontSize: 11, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down_circle_rounded, color: AppColors.royalBlue, size: 22),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              child: Text((_selectedCustomer?.name.isNotEmpty == true) ? _selectedCustomer!.name[0].toUpperCase() : 'C',
-                                  style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(_selectedCustomer?.name ?? 'Walk-in Customer',
-                                      style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                                  const SizedBox(height: 2),
-                                  Text(_selectedCustomer?.phone ?? 'Standard Billing',
-                                      style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -413,11 +678,46 @@ class _BillingScreenState extends State<BillingScreen> {
                     child: TextField(
                       controller: _searchCtrl,
                       onChanged: (_) => setState(() {}),
+                      onSubmitted: (text) {
+                        if (text.trim().isNotEmpty) {
+                          final matches = _searchResults;
+                          if (matches.isNotEmpty) {
+                            _addItem(matches.first);
+                          } else {
+                            _addItem(null, customName: text.trim());
+                          }
+                        }
+                      },
+                      textInputAction: TextInputAction.done,
                       style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
                       decoration: InputDecoration(
-                        hintText: 'Type to search or add custom product...',
-                        hintStyle: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 14),
+                        hintText: 'Type product name or select from list...',
+                        hintStyle: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 13),
                         prefixIcon: const Icon(Icons.search_rounded, color: AppColors.royalBlue),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.list_alt_rounded, color: AppColors.royalBlue),
+                              tooltip: 'Browse All Stock',
+                              onPressed: () => _showProductSelectionSheet(),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_rounded, color: AppColors.emeraldGreen),
+                              tooltip: 'Add Item',
+                              onPressed: () {
+                                if (_searchCtrl.text.trim().isNotEmpty) {
+                                  final matches = _searchResults;
+                                  if (matches.isNotEmpty) {
+                                    _addItem(matches.first);
+                                  } else {
+                                    _addItem(null, customName: _searchCtrl.text.trim());
+                                  }
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -471,6 +771,30 @@ class _BillingScreenState extends State<BillingScreen> {
               ],
             ),
 
+            // ⚡ Quick Inventory Product Chips
+            if (_dbProducts.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _dbProducts.take(15).map((p) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ActionChip(
+                          avatar: const Icon(Icons.add_rounded, size: 16, color: AppColors.royalBlue),
+                          label: Text('${p.name} (₹${p.sellingPrice.toStringAsFixed(0)})',
+                              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600)),
+                          backgroundColor: AppColors.royalBlue.withValues(alpha: 0.08),
+                          side: BorderSide(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                          onPressed: () => _addItem(p),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+
             // 🛒 Items List
             Expanded(
               child: _items.isEmpty
@@ -491,7 +815,7 @@ class _BillingScreenState extends State<BillingScreen> {
                       itemBuilder: (_, i) {
                         final item = _items[i];
                         return Dismissible(
-                          key: UniqueKey(),
+                          key: ObjectKey(item),
                           direction: DismissDirection.endToStart,
                           background: Container(
                             alignment: Alignment.centerRight,
@@ -618,40 +942,84 @@ class _BillingScreenState extends State<BillingScreen> {
                           Text('₹${fmt.format(_subtotal)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
+                      
+                      // 💵 Amount Received Input
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Discount', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500)),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Received Amount', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontWeight: FontWeight.w600, fontSize: 13)),
+                              Text('Amount Paid (₹)', style: GoogleFonts.outfit(color: Colors.grey.shade500, fontSize: 11)),
+                            ],
+                          ),
                           SizedBox(
-                            width: 100,
-                            height: 36,
+                            width: 120,
+                            height: 38,
                             child: TextField(
-                              controller: _discountCtrl,
+                              controller: _paidAmountCtrl,
                               keyboardType: TextInputType.number,
                               textAlign: TextAlign.right,
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 14),
-                              onChanged: (v) => setState(() => _discount = double.tryParse(v) ?? 0),
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.emeraldGreen, fontSize: 15),
+                              onChanged: (v) {
+                                setState(() {
+                                  _isManualPaidAmount = true;
+                                });
+                              },
                               decoration: InputDecoration(
-                                prefixText: '-₹',
-                                prefixStyle: GoogleFonts.outfit(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                                prefixText: '₹',
+                                prefixStyle: GoogleFonts.outfit(color: AppColors.emeraldGreen, fontWeight: FontWeight.bold),
+                                hintText: _grandTotal.toStringAsFixed(0),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                                 filled: true,
-                                fillColor: Colors.redAccent.withValues(alpha: 0.1),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                                fillColor: AppColors.emeraldGreen.withValues(alpha: 0.1),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1)),
+
+                      const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1)),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Grand Total', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w900, color: const Color(0xFF1E293B))),
                           Text('₹${fmt.format(_grandTotal)}', 
-                            style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
+                            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // 📌 Remaining Balance / Status Banner
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _dueAmount > 0 ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _dueAmount > 0 ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _dueAmount > 0 ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
+                              color: _dueAmount > 0 ? Colors.redAccent : AppColors.emeraldGreen,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _dueAmount > 0 ? 'Your remaining balance is ₹${fmt.format(_dueAmount)}' : 'Payment Status: PAID ✅',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _dueAmount > 0 ? Colors.red.shade700 : AppColors.emeraldGreen,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 20),
                       
@@ -703,7 +1071,7 @@ class _BillingScreenState extends State<BillingScreen> {
                                   children: [
                                     const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 22),
                                     const SizedBox(width: 10),
-                                    Text('GENERATE INVOICE', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                                    Text(widget.billToEdit != null ? 'UPDATE INVOICE' : 'GENERATE INVOICE', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
                                   ],
                                 ),
                           ),

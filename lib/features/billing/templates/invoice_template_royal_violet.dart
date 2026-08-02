@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-class InvoiceTemplatePremiumGold extends StatelessWidget {
+class InvoiceTemplateRoyalViolet extends StatelessWidget {
   final Map<String, dynamic> billData;
   final List<Map<String, dynamic>> itemsData;
 
-  const InvoiceTemplatePremiumGold({
+  const InvoiceTemplateRoyalViolet({
     super.key,
     required this.billData,
     required this.itemsData,
@@ -15,9 +15,9 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = NumberFormat('#,##,##0.00');
-    const goldAccent = Color(0xFFB45309);
-    const goldBg = Color(0xFFFEF3C7);
-    const textColor = Color(0xFF1E293B);
+    const violetColor = Color(0xFF6D28D9);
+    const violetBg = Color(0xFFF3E8FF);
+    const textColor = Color(0xFF0F172A);
 
     final customerName = billData['customer_name'] ?? 'Walk-in Customer';
     final customerMobile = billData['customer_mobile'] ?? '';
@@ -42,10 +42,10 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: goldAccent.withValues(alpha: 0.4), width: 2),
+        border: Border.all(color: violetColor.withValues(alpha: 0.3), width: 2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD97706).withValues(alpha: 0.08),
+            color: violetColor.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -60,7 +60,7 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -73,16 +73,16 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      (billData['shop_name'] ?? 'RETAILFLOW POS').toString().toUpperCase(),
-                      style: GoogleFonts.cinzel(
+                      (billData['shop_name'] ?? 'RETAILFLOW CLOTH SHOP').toString().toUpperCase(),
+                      style: GoogleFonts.outfit(
                         color: Colors.white,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     Text(
-                      billData['shop_address'] ?? 'Boutique Receipt',
+                      billData['shop_address'] ?? 'Royal Violet Receipt',
                       style: GoogleFonts.outfit(color: Colors.white70, fontSize: 10),
                     ),
                   ],
@@ -94,8 +94,8 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'GOLD',
-                    style: GoogleFonts.outfit(color: goldAccent, fontSize: 10, fontWeight: FontWeight.w900),
+                    'VIOLET',
+                    style: GoogleFonts.outfit(color: violetColor, fontSize: 10, fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
@@ -108,7 +108,7 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: goldBg.withValues(alpha: 0.4),
+              color: violetBg.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -125,7 +125,7 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('Bill #${billData['bill_number']}', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: goldAccent)),
+                    Text('Bill #${billData['bill_number']}', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: violetColor)),
                     Text(formattedDate, style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade600)),
                   ],
                 ),
@@ -139,7 +139,7 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF78350F),
+              color: violetColor,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
@@ -195,13 +195,13 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: goldBg,
+                  color: violetBg,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: goldAccent),
+                  border: Border.all(color: violetColor),
                 ),
                 child: Text(
                   'TOTAL: ₹${fmt.format(grandTotal)}',
-                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w900, color: goldAccent),
+                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w900, color: violetColor),
                 ),
               ),
             ],

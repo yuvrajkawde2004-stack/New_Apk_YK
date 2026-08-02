@@ -7,13 +7,7 @@ class TopCategoriesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      {'name': 'Saree', 'trend': 'up', 'value': 0.8},
-      {'name': 'Kurti', 'trend': 'up', 'value': 0.65},
-      {'name': 'Lehenga', 'trend': 'down', 'value': 0.4},
-      {'name': 'Suit', 'trend': 'up', 'value': 0.75},
-      {'name': 'Dupatta', 'trend': 'down', 'value': 0.3},
-    ];
+    final categories = [];
 
     return Container(
       padding: const EdgeInsets.all(20),

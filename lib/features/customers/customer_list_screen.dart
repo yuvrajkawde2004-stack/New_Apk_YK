@@ -145,7 +145,11 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     physics: const BouncingScrollPhysics(),
                     itemCount: _filtered.length,
-                    itemBuilder: (_, i) => _CustomerCard(customer: _filtered[i], index: i),
+                    itemBuilder: (_, i) => _CustomerCard(
+                    customer: _filtered[i], 
+                    index: i,
+                    onLongPress: () => _showCustomerOptionsBottomSheet(_filtered[i]),
+                  ),
                   ),
           ),
         ],
@@ -178,17 +182,169 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       ),
     );
   }
+
+  void _showCustomerOptionsBottomSheet(Customer customer) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                customer.name,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                customer.phone ?? 'No Phone',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: AppColors.royalBlue),
+                title: const Text('Edit Customer (माहिती बदला)', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showEditCustomerDialog(customer);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+                title: const Text('Delete Customer (कस्टमर डिलीट करा)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteCustomer(customer);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditCustomerDialog(Customer customer) {
+    final nameCtrl = TextEditingController(text: customer.name);
+    final phoneCtrl = TextEditingController(text: customer.phone ?? '');
+    final notesCtrl = TextEditingController(text: customer.notes ?? '');
+    final duesCtrl = TextEditingController(text: customer.outstandingBalance.toStringAsFixed(0));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Edit Customer Details', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Customer Name', prefixIcon: Icon(Icons.person_outline_rounded)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Phone Number', prefixIcon: Icon(Icons.phone_outlined)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(labelText: 'Address / Notes', prefixIcon: Icon(Icons.location_on_outlined)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: duesCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Outstanding Dues (₹)', prefixIcon: Icon(Icons.account_balance_wallet_outlined)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
+            onPressed: () async {
+              if (nameCtrl.text.trim().isEmpty) return;
+              await DatabaseHelper.instance.updateCustomer(customer.id!, {
+                'name': nameCtrl.text.trim(),
+                'phone': phoneCtrl.text.trim(),
+                'address': notesCtrl.text.trim(),
+                'outstanding_balance': double.tryParse(duesCtrl.text.trim()) ?? 0.0,
+              });
+              if (mounted) {
+                Navigator.pop(ctx);
+                _loadCustomers();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Customer updated successfully!'), backgroundColor: AppColors.emeraldGreen),
+                );
+              }
+            },
+            child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteCustomer(Customer customer) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Customer?', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete "${customer.name}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              await DatabaseHelper.instance.deleteCustomer(customer.id!);
+              if (mounted) {
+                Navigator.pop(ctx);
+                _loadCustomers();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Customer "${customer.name}" deleted!'), backgroundColor: Colors.redAccent),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _CustomerCard extends StatelessWidget {
   final Customer customer;
   final int index;
-  const _CustomerCard({required this.customer, required this.index});
+  final VoidCallback? onLongPress;
+  const _CustomerCard({required this.customer, required this.index, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
     final hasDue = customer.outstandingBalance > 0;
     return GestureDetector(
+      onLongPress: onLongPress,
       onTap: () {
         Navigator.push(
           context,
@@ -330,21 +486,40 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
   bool _isSaving = false;
 
   Future<void> _saveCustomer() async {
-    if (_nameCtrl.text.isEmpty || _phoneCtrl.text.isEmpty) return;
+    if (_nameCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name is required')),
+      );
+      return;
+    }
     
     setState(() => _isSaving = true);
     
-    await DatabaseHelper.instance.addCustomer({
-      'name': _nameCtrl.text.trim(),
-      'phone': _phoneCtrl.text.trim(),
-      'address': _notesCtrl.text.trim(), // Storing notes as address for now
-      'outstanding_balance': 0.0,
-      'total_spent': 0.0,
-    });
-    
-    if (mounted) {
-      widget.onSaved();
-      Navigator.pop(context);
+    try {
+      final phoneVal = _phoneCtrl.text.trim();
+      
+      await DatabaseHelper.instance.addCustomer({
+        'name': _nameCtrl.text.trim(),
+        'phone': phoneVal.isEmpty ? 'N/A_${DateTime.now().millisecondsSinceEpoch}' : phoneVal,
+        'address': _notesCtrl.text.trim(), 
+        'outstanding_balance': 0.0,
+        'total_spent': 0.0,
+      });
+      
+      if (mounted) {
+        widget.onSaved();
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Customer added successfully!'), backgroundColor: AppColors.emeraldGreen),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add customer. Maybe phone number already exists?'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 

@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/services/cloudflare_api_service.dart';
 
 class OtpLoginScreen extends StatefulWidget {
   const OtpLoginScreen({super.key});
@@ -18,28 +21,30 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
   bool _isPasswordVisible = false;
   bool _agreeTerms = true;
   bool _isSignUpMode = false;
+  bool _isLoading = false;
+  int _otpTimer = 0;
+  Timer? _timer;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _handleLoginOrSignUp() {
+  Future<void> _handleLoginOrSignUp() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email.isEmpty && password.isEmpty) {
-      // Direct demo login fallback
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Welcome back to RetailFlow!'),
-          backgroundColor: AppColors.emeraldGreen,
+          content: Text('Please enter both Email/Mobile and Password/OTP'),
+          backgroundColor: Colors.orangeAccent,
         ),
       );
-      Navigator.pushReplacementNamed(context, '/dashboard');
       return;
     }
 
@@ -53,13 +58,99 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       return;
     }
 
+    setState(() => _isLoading = true);
+    final result = await CloudflareApiService.verifyOtp(target: email, code: password);
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isSignUpMode ? 'Account created successfully!' : 'Login Successful! Welcome back.'),
+          backgroundColor: AppColors.emeraldGreen,
+        ),
+      );
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
+      
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Login failed. Please check your OTP or Password.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isSignUpMode ? 'Account created successfully!' : 'Login Successful! Welcome back.'),
-        backgroundColor: AppColors.emeraldGreen,
+      const SnackBar(
+        content: Text('Google Sign In is temporarily unavailable. Please use OTP Login.'),
+        backgroundColor: Colors.redAccent,
       ),
     );
-    Navigator.pushReplacementNamed(context, '/dashboard');
+  }
+
+  Future<void> _sendOtp() async {
+    final target = _emailController.text.trim();
+    if (target.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter Email or Mobile Number first'),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    final type = target.contains('@') ? 'gmail' : 'mobile';
+    final result = await CloudflareApiService.sendOtp(target: target, type: type);
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      setState(() {
+        _otpTimer = 30;
+      });
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        setState(() {
+          if (_otpTimer > 0) {
+            _otpTimer--;
+          } else {
+            timer.cancel();
+          }
+        });
+      });
+
+      // Auto-fill OTP for easier testing since SMS might not arrive
+      if (result['debug_otp'] != null) {
+        _passwordController.text = result['debug_otp'].toString();
+      }
+
+      final debugOtp = result['debug_otp'] != null ? '\n(Auto-filled OTP: ${result['debug_otp']})' : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${result['message']}$debugOtp'),
+          backgroundColor: AppColors.emeraldGreen,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Failed to send OTP'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -253,11 +344,25 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                           type: TextInputType.emailAddress,
                           delayMs: 250,
                         ),
-                        const SizedBox(height: 14),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: (_isLoading || _otpTimer > 0) ? null : _sendOtp,
+                            child: Text(
+                              _otpTimer > 0 ? 'Wait ${_otpTimer}s' : 'Send OTP',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF10B981),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
 
                         _buildInputField(
                           controller: _passwordController,
-                          hint: 'Password or OTP',
+                          hint: 'OTP',
                           icon: Icons.lock_outline_rounded,
                           isPassword: true,
                           isPasswordVisible: _isPasswordVisible,
@@ -266,6 +371,24 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                           },
                           delayMs: 300,
                         ),
+                        
+                        // Countdown Timer UI
+                        if (_otpTimer > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0, right: 10),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                'OTP is valid for ${_otpTimer}s',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ).animate().fadeIn(),
+                          ),
+                          
                         const SizedBox(height: 14),
 
                         // Checkbox row
@@ -330,15 +453,24 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                                 borderRadius: BorderRadius.circular(30),
                               ),
                             ),
-                            child: Text(
-                              _isSignUpMode ? 'Sign Up' : 'Log In',
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Text(
+                                    _isSignUpMode ? 'Sign Up' : 'Log In',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                           ),
                         ).animate().scale(delay: 400.ms, duration: 400.ms, curve: Curves.easeOutBack),
 
@@ -368,28 +500,43 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _socialButton(
-                              color: const Color(0xFFEA4335), // Red
-                              icon: Icons.g_mobiledata_rounded,
-                              iconSize: 28,
-                              onTap: _handleLoginOrSignUp,
-                            ),
-                            const SizedBox(width: 20),
-                            _socialButton(
-                              color: const Color(0xFFFBBC05), // Yellow
-                              icon: Icons.phone_android_rounded,
-                              iconSize: 22,
-                              onTap: _handleLoginOrSignUp,
-                            ),
-                            const SizedBox(width: 20),
-                            _socialButton(
-                              color: const Color(0xFF1877F2), // Blue
-                              icon: Icons.facebook_rounded,
-                              iconSize: 22,
-                              onTap: _handleLoginOrSignUp,
-                            ),
+                            Container(
+                              width: 250,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 8,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: InkWell(
+                                onTap: _handleGoogleSignIn,
+                                borderRadius: BorderRadius.circular(30),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.g_mobiledata_rounded, color: Color(0xFFEA4335), size: 36),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Continue with Google',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimaryLight,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ).animate().slideY(delay: 500.ms, begin: 0.3, end: 0).fadeIn(),
                           ],
-                        ).animate().slideY(delay: 500.ms, begin: 0.3, end: 0).fadeIn(),
+                        ),
 
                         const SizedBox(height: 14),
 

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/localization/app_localizations.dart';
+import '../../core/database/database_helper.dart';
+import '../dashboard/dashboard_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -12,22 +15,84 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   String _period = 'Monthly';
-  final _periods = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
+  final _periods = ['Daily', 'Weekly', 'Monthly', 'All Time'];
+
+  Future<Map<String, dynamic>> _fetchReportData() async {
+    final db = DatabaseHelper.instance;
+    final todaySales = await db.getTodaySales();
+    final monthlySales = await db.getMonthlySales();
+    final totalBills = await db.getTotalBills();
+    final weeklySalesData = await db.getWeeklySalesData();
+    final customers = await db.getCustomers(limit: 1000);
+    final suppliers = await db.getSuppliers();
+    final purchases = await db.getAllPurchases();
+
+    final customerDues = customers.fold<double>(0.0, (sum, c) => sum + ((c['outstanding_balance'] as num?)?.toDouble() ?? 0.0));
+    final supplierDues = suppliers.fold<double>(0.0, (sum, s) => sum + ((s['outstanding_due'] as num?)?.toDouble() ?? 0.0));
+    final totalPurchasesCost = purchases.fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    final monthStr = DateTime.now().toIso8601String().substring(0, 7);
+    final weekAgoStr = DateTime.now().subtract(const Duration(days: 7)).toIso8601String().substring(0, 10);
+
+    double selectedSales = monthlySales;
+    double selectedPurchasesCost = 0.0;
+    
+    if (_period == 'Daily') {
+      selectedSales = todaySales;
+      selectedPurchasesCost = purchases.where((p) => (p['purchase_date'] ?? '').startsWith(todayStr))
+          .fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+    } else if (_period == 'Monthly') {
+      selectedSales = monthlySales;
+      selectedPurchasesCost = purchases.where((p) => (p['purchase_date'] ?? '').startsWith(monthStr))
+          .fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+    } else if (_period == 'Weekly') {
+      selectedSales = weeklySalesData.fold<double>(0.0, (sum, item) => sum + ((item['sales'] as num?)?.toDouble() ?? 0.0));
+      selectedPurchasesCost = purchases.where((p) {
+        final dStr = (p['purchase_date'] as String?) ?? '';
+        return dStr.isNotEmpty && dStr.substring(0, 10).compareTo(weekAgoStr) >= 0;
+      }).fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+    } else if (_period == 'All Time') {
+      final allBills = await db.getBills(limit: 10000);
+      selectedSales = allBills.fold<double>(0.0, (sum, b) => sum + ((b['grand_total'] as num?)?.toDouble() ?? 0.0));
+      selectedPurchasesCost = totalPurchasesCost;
+    }
+
+    return {
+      'sales': selectedSales,
+      'todaySales': todaySales,
+      'monthlySales': monthlySales,
+      'totalBills': totalBills,
+      'customerDues': customerDues,
+      'supplierDues': supplierDues,
+      'totalPurchasesCost': selectedPurchasesCost,
+      'weeklySalesData': weeklySalesData,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
+    final fmt = NumberFormat('#,##,##0.00');
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: Text(loc.translate('reports'))),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        title: Text(
+          'Sales & Business Intelligence',
+          style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Period Selector
+              // Period Selector Tabs
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -39,25 +104,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         onTap: () => setState(() => _period = p),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                           decoration: BoxDecoration(
-                            gradient: sel ? AppColors.primaryGradient : null,
+                            gradient: sel
+                                ? const LinearGradient(colors: [AppColors.royalBlue, Color(0xFF2563EB)])
+                                : null,
                             color: sel ? null : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(16),
                             boxShadow: sel
-                                ? [
-                                    BoxShadow(
-                                      color: AppColors.royalBlue.withValues(alpha: 0.3),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : [],
+                                ? [BoxShadow(color: AppColors.royalBlue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))]
+                                : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))],
                           ),
-                          child: Text(p,
-                              style: TextStyle(
-                                  color: sel ? Colors.white : AppColors.textSecondaryLight,
-                                  fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+                          child: Text(
+                            p,
+                            style: GoogleFonts.outfit(
+                              color: sel ? Colors.white : AppColors.textSecondaryLight,
+                              fontWeight: sel ? FontWeight.bold : FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -65,78 +129,182 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ).animate().fadeIn(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Sales Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _MetricCard(
-                      title: 'Total Sales',
-                      value: '₹12,50,000',
-                      sub: '+18.5%',
-                      icon: Icons.trending_up_rounded,
-                      color: AppColors.royalBlue,
-                      delay: 100,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _MetricCard(
-                      title: 'Net Profit',
-                      value: '₹3,25,000',
-                      sub: '+22.1%',
-                      icon: Icons.account_balance_rounded,
-                      color: AppColors.emeraldGreen,
-                      delay: 200,
-                    ),
-                  ),
-                ],
+              FutureBuilder<Map<String, dynamic>>(
+                future: _fetchReportData(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: AppColors.royalBlue)));
+                  }
+
+                  final data = snapshot.data ?? {};
+                  final sales = (data['sales'] as num?)?.toDouble() ?? 0.0;
+                  final totalBills = data['totalBills'] ?? 0;
+                  final customerDues = (data['customerDues'] as num?)?.toDouble() ?? 0.0;
+                  final supplierDues = (data['supplierDues'] as num?)?.toDouble() ?? 0.0;
+                  final purchasesCost = (data['totalPurchasesCost'] as num?)?.toDouble() ?? 0.0;
+                  final estProfit = sales - purchasesCost;
+                  final weeklyData = (data['weeklySalesData'] as List<Map<String, dynamic>>?) ?? [];
+
+                  // Find max sales for weekly chart scaling
+                  final maxWeeklySales = weeklyData.fold<double>(1.0, (maxVal, item) {
+                    final s = (item['sales'] as num?)?.toDouble() ?? 0.0;
+                    return s > maxVal ? s : maxVal;
+                  });
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 🌟 1. HERO SALES CARD
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, 6))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Total Revenue ($_period)', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.5)),
+                                  ),
+                                  child: Text('LIVE DATA', style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            AnimatedRollingCurrency(
+                              value: sales,
+                              style: GoogleFonts.outfit(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Icon(Icons.receipt_rounded, color: Colors.white.withValues(alpha: 0.7), size: 16),
+                                const SizedBox(width: 6),
+                                AnimatedRollingNumber(
+                                  value: totalBills,
+                                  style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
+                                ),
+                                Text(' Total Invoices Created', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ).animate().slideY(begin: -0.05).fadeIn(),
+
+                      const SizedBox(height: 18),
+
+                      // 📊 2. FINANCIAL METRICS GRID
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _miniMetricCard('Customer Dues', customerDues, 'ग्राहक उधारी', Icons.people_outline_rounded, Colors.red.shade600, const Color(0xFFFEF2F2)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _miniMetricCard('Supplier Dues', supplierDues, 'सप्लायर उधारी', Icons.local_shipping_outlined, Colors.orange.shade700, const Color(0xFFFFF7ED)),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _miniMetricCard('Stock Purchases', purchasesCost, 'एकूण खरेदी', Icons.shopping_bag_outlined, const Color(0xFF2563EB), const Color(0xFFEFF6FF)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _miniMetricCard('Est. Net Profit', estProfit > 0 ? estProfit : 0.0, 'अंदाजित नफा', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // 📈 3. WEEKLY SALES GRAPH CHART
+                      Text('7-DAY REVENUE PERFORMANCE', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight, letterSpacing: 0.8)),
+                      const SizedBox(height: 12),
+
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 3))],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Weekly Revenue Trend', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                                Text('Last 7 Days', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade500)),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              height: 150,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: weeklyData.map((item) {
+                                  final daySales = (item['sales'] as num?)?.toDouble() ?? 0.0;
+                                  final pct = (daySales / maxWeeklySales).clamp(0.08, 1.0);
+                                  final dayName = item['day'] ?? '';
+
+                                  return Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(daySales > 0 ? '₹${(daySales / 1000).toStringAsFixed(1)}k' : '₹0', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                                      const SizedBox(height: 6),
+                                      AnimatedContainer(
+                                        duration: const Duration(milliseconds: 600),
+                                        width: 24,
+                                        height: 100 * pct,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: daySales > 0 ? [AppColors.royalBlue, const Color(0xFF3B82F6)] : [Colors.grey.shade300, Colors.grey.shade200],
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                          ),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(dayName, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+                    ],
+                  );
+                },
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MetricCard(
-                      title: 'Total Bills',
-                      value: '284',
-                      sub: 'This Month',
-                      icon: Icons.receipt_long_rounded,
-                      color: AppColors.purpleAccent,
-                      delay: 300,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: _MetricCard(
-                      title: 'GST Collected',
-                      value: '₹47,500',
-                      sub: 'GSTR Ready',
-                      icon: Icons.percent_rounded,
-                      color: AppColors.softOrange,
-                      delay: 400,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 28),
-
-              Text('Top Categories', style: Theme.of(context).textTheme.titleLarge)
-                  .animate()
-                  .fadeIn(delay: 300.ms),
-              const SizedBox(height: 14),
-              _buildCategoryBars(),
-
-              const SizedBox(height: 28),
-
-              Text('Top Products', style: Theme.of(context).textTheme.titleLarge)
-                  .animate()
-                  .fadeIn(delay: 400.ms),
-              const SizedBox(height: 14),
-              _buildTopProducts(),
-
-              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -144,173 +312,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildCategoryBars() {
-    final data = [
-      ('Saree', 0.75, AppColors.royalBlue),
-      ('Kurti', 0.55, AppColors.emeraldGreen),
-      ('Lehenga', 0.85, AppColors.purpleAccent),
-      ('Suit', 0.40, AppColors.softOrange),
-      ('Dupatta', 0.30, const Color(0xFFEC4899)),
-    ];
-
-    return Column(
-      children: data.asMap().entries.map((e) {
-        final i = e.key;
-        final (name, pct, color) = e.value;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: Row(
-            children: [
-              SizedBox(
-                  width: 72,
-                  child: Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        minHeight: 10,
-                        backgroundColor: color.withValues(alpha: 0.12),
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text('${(pct * 100).toInt()}%',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
-            ],
-          ).animate().slideX(delay: (300 + i * 80).ms, begin: 0.2, end: 0).fadeIn(),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildTopProducts() {
-    final products = [
-      ('Bridal Lehenga Set', '₹76,000', 2),
-      ('Kanjivaram Silk Saree', '₹52,500', 5),
-      ('Cotton Kurti', '₹18,050', 19),
-      ('Salwar Suit Set', '₹14,000', 5),
-    ];
-
-    return Column(
-      children: products.asMap().entries.map((e) {
-        final i = e.key;
-        final (name, revenue, qty) = e.value;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.royalBlue.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Text('${i + 1}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.royalBlue,
-                        fontSize: 13)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(revenue,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.emeraldGreen,
-                          fontSize: 14)),
-                  Text('$qty units',
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.textSecondaryLight.withValues(alpha: 0.8))),
-                ],
-              ),
-            ],
-          ),
-        ).animate().slideY(delay: (400 + i * 80).ms, begin: 0.15, end: 0).fadeIn();
-      }).toList(),
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  final String title, value, sub;
-  final IconData icon;
-  final Color color;
-  final int delay;
-
-  const _MetricCard({
-    required this.title,
-    required this.value,
-    required this.sub,
-    required this.icon,
-    required this.color,
-    required this.delay,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _miniMetricCard(String title, double val, String sub, IconData icon, Color color, Color bg) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bg,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.1),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: color, size: 22),
+              Text(sub, style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(value,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          AnimatedRollingCurrency(
+            value: val,
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 18, color: const Color(0xFF0F172A)),
+          ),
           const SizedBox(height: 2),
-          Text(sub,
-              style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          Text(title,
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight)),
+          Text(title, style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
         ],
       ),
-    ).animate().scale(delay: delay.ms, duration: 350.ms, curve: Curves.easeOutBack);
+    );
   }
 }

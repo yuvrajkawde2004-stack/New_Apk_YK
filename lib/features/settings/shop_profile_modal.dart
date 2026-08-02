@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
+import '../dashboard/providers/dashboard_provider.dart';
 
 class ShopProfileModal extends StatefulWidget {
   const ShopProfileModal({super.key});
@@ -15,8 +18,32 @@ class _ShopProfileModalState extends State<ShopProfileModal> {
   final _addressController = TextEditingController(text: '123 Main Street, Market Area, City');
   final _phoneController = TextEditingController(text: '+91 9876543210');
 
-  void _saveProfile() {
-    // In a real app, save via Provider or Service
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _nameController.text = prefs.getString('shop_name') ?? 'RetailFlow';
+      _gstinController.text = prefs.getString('shop_gstin') ?? '27AADCB2230M1Z2';
+      _addressController.text = prefs.getString('shop_address') ?? '123 Main Street, Market Area, City';
+      _phoneController.text = prefs.getString('shop_phone') ?? '+91 9876543210';
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = _nameController.text.trim();
+    await prefs.setString('shop_name', name);
+    await prefs.setString('shop_gstin', _gstinController.text.trim());
+    await prefs.setString('shop_address', _addressController.text.trim());
+    await prefs.setString('shop_phone', _phoneController.text.trim());
+
+    if (!mounted) return;
+    Provider.of<DashboardProvider>(context, listen: false).updateShopName(name);
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

@@ -72,8 +72,6 @@ class StickyBottomBar extends StatelessWidget {
           ),
         ),
       ),
-    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-     .scaleXY(begin: 0.98, end: 1.02, duration: 1600.ms, curve: Curves.easeInOut);
+    ).animate().scaleXY(begin: 0.98, end: 1.0, duration: 300.ms);
   }
 }
-

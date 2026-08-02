@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/database/database_helper.dart';
 import '../../widgets/animated_premium_button.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -20,10 +23,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _stockController = TextEditingController();
   final _barcodeController = TextEditingController();
 
-  String? _selectedCategory;
   String? _selectedGst;
   String? _selectedColor;
   bool _isSaving = false;
+  File? _selectedImage;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
 
   final _categories = ['Saree', 'Kurti', 'Lehenga', 'Suit', 'Dupatta', 'Gown', 'Other'];
   final _gstRates = ['0%', '5%', '12%', '18%', '28%'];
@@ -42,27 +55,52 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Future<void> _saveProduct() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product Name is required')));
+      return;
+    }
+    
     setState(() => _isSaving = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 12),
-            Text('Product saved successfully!'),
-          ],
+    
+    try {
+      await DatabaseHelper.instance.addProduct({
+        'product_name': _nameController.text.trim(),
+        'category': 'Default', // Category removed per request
+        'purchase_rate': double.tryParse(_purchaseController.text) ?? 0.0,
+        'quantity': int.tryParse(_stockController.text) ?? 0,
+        'supplier_name': _brandController.text.trim(),
+        'image_url': _selectedImage?.path ?? '',
+        'purchase_date': DateTime.now().toIso8601String(),
+        'low_stock_limit': 5,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Product saved successfully!'),
+            ],
+          ),
+          backgroundColor: AppColors.emeraldGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ),
-        backgroundColor: AppColors.emeraldGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-    Navigator.pop(context);
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
@@ -86,7 +124,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               // Product Image Placeholder
               Center(
                 child: GestureDetector(
-                  onTap: () {},
+                  onTap: _pickImage,
                   child: Container(
                     width: 120,
                     height: 120,
@@ -100,15 +138,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         style: BorderStyle.solid,
                         width: 2,
                       ),
+                      image: _selectedImage != null
+                          ? DecorationImage(
+                              image: FileImage(_selectedImage!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_a_photo_rounded, color: AppColors.royalBlue, size: 32),
-                        SizedBox(height: 6),
-                        Text('Add Photo', style: TextStyle(color: AppColors.royalBlue, fontSize: 12)),
-                      ],
-                    ),
+                    child: _selectedImage == null
+                        ? const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo_rounded, color: AppColors.royalBlue, size: 32),
+                              SizedBox(height: 6),
+                              Text('Add Photo', style: TextStyle(color: AppColors.royalBlue, fontSize: 12)),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
                   ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
                 ),
               ),
@@ -118,17 +164,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 14),
               _buildCard([
                 _field(controller: _nameController, label: 'Product Name *',
-                    icon: Icons.label_rounded, validator: _required),
+                    icon: Icons.label_rounded),
                 const SizedBox(height: 16),
-                _field(controller: _brandController, label: 'Brand', icon: Icons.branding_watermark),
+                _field(controller: _brandController, label: 'Supplier / Purchase Name', icon: Icons.branding_watermark),
                 const SizedBox(height: 16),
-                _dropdown(
-                  label: 'Category',
-                  value: _selectedCategory,
-                  items: _categories,
-                  onChanged: (v) => setState(() => _selectedCategory = v),
-                ),
-                const SizedBox(height: 16),
+                // Category removed
                 _dropdown(
                   label: 'Color',
                   value: _selectedColor,
@@ -148,8 +188,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           controller: _mrpController,
                           label: 'MRP (₹)',
                           icon: Icons.currency_rupee,
-                          keyboardType: TextInputType.number,
-                          validator: _required),
+                          keyboardType: TextInputType.number),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -157,8 +196,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           controller: _sellingController,
                           label: 'Selling ₹',
                           icon: Icons.sell_rounded,
-                          keyboardType: TextInputType.number,
-                          validator: _required),
+                          keyboardType: TextInputType.number),
                     ),
                   ],
                 ),
@@ -170,8 +208,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           controller: _purchaseController,
                           label: 'Purchase ₹',
                           icon: Icons.shopping_bag_rounded,
-                          keyboardType: TextInputType.number,
-                          validator: _required),
+                          keyboardType: TextInputType.number),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -196,8 +233,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           controller: _stockController,
                           label: 'Opening Stock',
                           icon: Icons.inventory_2_rounded,
-                          keyboardType: TextInputType.number,
-                          validator: _required),
+                          keyboardType: TextInputType.number),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 /// Flutter App -> Cloudflare Workers (Backend API) -> Cloudflare D1 (SQLite Database) -> Cloudflare R2 (PDF/Image Storage)
 class CloudflareApiService {
   // Base URL of the deployed Cloudflare Worker API
-  static const String baseUrl = 'https://retailflow-api.workers.dev';
+  static const String baseUrl = 'https://retailflow-backend.retailflow-backend.workers.dev';
 
   // Toggle for offline fallback mode (uses fallback if network/Cloudflare worker is unreachable)
   static bool useOfflineFallback = false;
@@ -49,16 +49,21 @@ class CloudflareApiService {
         body: jsonEncode({'target': target, 'type': type}),
       ).timeout(const Duration(seconds: 5));
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+      try {
+        final data = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          return data;
+        } else {
+          return {'success': false, 'message': data['message'] ?? data['error'] ?? 'Cloudflare Worker error: ${response.statusCode}'};
+        }
+      } catch (e) {
+        return {'success': false, 'message': 'Cloudflare Worker status ${response.statusCode}'};
       }
-      return {'success': false, 'message': 'Cloudflare Worker status ${response.statusCode}'};
     } catch (e) {
       debugPrint('Cloudflare sendOtp error: $e');
       return {
-        'success': true,
-        'message': 'OTP sent to $target (Offline Fallback)',
-        'code': '123456',
+        'success': false,
+        'message': 'Failed to connect to backend: $e',
       };
     }
   }
@@ -89,8 +94,8 @@ class CloudflareApiService {
     } catch (e) {
       debugPrint('Cloudflare verifyOtp error: $e');
       return {
-        'success': true,
-        'token': 'local_token_${DateTime.now().millisecondsSinceEpoch}',
+        'success': false,
+        'message': 'Failed to connect to backend: $e',
       };
     }
   }
@@ -197,6 +202,32 @@ class CloudflareApiService {
     } catch (e) {
       debugPrint('Cloudflare R2 Upload error: $e');
       return 'https://r2.retailflow.com/$filename';
+    }
+  }
+
+  /// 7. Sync API: Push local sync logs to Cloudflare
+  static Future<Map<String, dynamic>> pushSyncLogs(List<Map<String, dynamic>> logs, String token) async {
+    try {
+      if (useOfflineFallback || logs.isEmpty) {
+        return {'success': true, 'processed': logs.length};
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/sync'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'logs': logs}),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {'success': false, 'message': 'Failed to push sync logs'};
+    } catch (e) {
+      debugPrint('Cloudflare pushSyncLogs error: $e');
+      return {'success': false, 'message': e.toString()};
     }
   }
 }

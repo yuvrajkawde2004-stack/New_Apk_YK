@@ -1,9 +1,19 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/models/customer.dart';
 import '../../core/theme/app_colors.dart';
 import '../billing/billing_screen.dart';
+import '../../core/database/database_helper.dart';
+import '../billing/templates/invoice_template_classic_gst.dart';
+import '../billing/templates/invoice_template_premium_gold.dart';
+import '../billing/templates/invoice_template_modern_emerald.dart';
+import '../billing/templates/invoice_template_royal_violet.dart';
+import '../billing/templates/invoice_template_minimal_slate.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   final Customer customer;
@@ -15,43 +25,161 @@ class CustomerProfileScreen extends StatefulWidget {
 }
 
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
-  final List<Map<String, dynamic>> _mockBills = [
-    {'id': 'INV-2025-001', 'amount': '₹ 10,500', 'date': 'Today, 02:30 PM', 'paid': true},
-    {'id': 'INV-2025-014', 'amount': '₹ 3,800', 'date': '25 Jul 2025', 'paid': true},
-    {'id': 'INV-2025-042', 'amount': '₹ 4,500', 'date': '18 Jun 2025', 'paid': false},
-  ];
+  List<Map<String, dynamic>> _customerBills = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomerBills();
+  }
+
+  Future<void> _loadCustomerBills() async {
+    try {
+      final bills = await DatabaseHelper.instance.getCustomerBills(
+        widget.customer.id ?? 0, 
+        customerName: widget.customer.name, 
+        customerPhone: widget.customer.phone,
+      );
+      setState(() {
+        _customerBills = bills;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   Future<void> _openWhatsAppChat(Map<String, dynamic> bill) async {
-    final rawPhone = widget.customer.phone?.replaceAll(RegExp(r'[^0-9]'), '') ?? '9876543210';
-    final phone = rawPhone.length == 10 ? '91$rawPhone' : rawPhone;
+    await _showColorInvoicePreview(bill);
+  }
 
-    final message = '''
-Hello ${widget.customer.name},
+  Future<void> _showColorInvoicePreview(Map<String, dynamic> bill) async {
+    final billId = bill['id'] is int ? bill['id'] as int : int.tryParse(bill['id'].toString()) ?? 0;
+    final itemsData = await DatabaseHelper.instance.getBillItems(billId);
+    
+    if (!mounted) return;
 
-Here is your invoice summary from *RetailFlow*:
+    final screenshotController = ScreenshotController();
 
-📄 *Bill No:* ${bill['id']}
-📅 *Date:* ${bill['date']}
-💰 *Total Amount:* ${bill['amount']}
-💳 *Status:* ${bill['paid'] ? 'Paid ✅' : 'Pending ⏳'}
+    final billData = {
+      'bill_number': bill['bill_number'] ?? 'INV_$billId',
+      'customer_name': widget.customer.name,
+      'customer_mobile': widget.customer.phone ?? '',
+      'subtotal': (bill['subtotal'] as num?)?.toDouble() ?? (bill['grand_total'] as num?)?.toDouble() ?? 0.0,
+      'discount': (bill['discount'] as num?)?.toDouble() ?? 0.0,
+      'gst': (bill['gst'] as num?)?.toDouble() ?? 0.0,
+      'grand_total': (bill['grand_total'] as num?)?.toDouble() ?? 0.0,
+      'payment_method': bill['payment_method'] ?? 'Cash',
+      'bill_date': bill['bill_date'] ?? DateTime.now().toIso8601String(),
+    };
 
-Thank you for shopping with us!
-*RetailFlow - Smart Billing. Smarter Inventory.*
-''';
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: FutureBuilder<SharedPreferences>(
+          future: SharedPreferences.getInstance(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Colors.white));
+            
+            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Royal Blue';
+            
+            Widget invoiceWidget;
+            if (tmpl == 'Classic GST') {
+              invoiceWidget = InvoiceTemplateClassicGst(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Modern Emerald') {
+              invoiceWidget = InvoiceTemplateModernEmerald(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Royal Violet') {
+              invoiceWidget = InvoiceTemplateRoyalViolet(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Minimal Slate') {
+              invoiceWidget = InvoiceTemplateMinimalSlate(billData: billData, itemsData: itemsData);
+            } else {
+              invoiceWidget = InvoiceTemplatePremiumGold(billData: billData, itemsData: itemsData);
+            }
 
-    final encodedMsg = Uri.encodeComponent(message);
-    final whatsappScheme = Uri.parse('whatsapp://send?phone=$phone&text=$encodedMsg');
-    final webScheme = Uri.parse('https://wa.me/$phone?text=$encodedMsg');
-
-    try {
-      if (await canLaunchUrl(whatsappScheme)) {
-        await launchUrl(whatsappScheme);
-      } else {
-        await launchUrl(webScheme, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      await launchUrl(webScheme, mode: LaunchMode.externalApplication);
-    }
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Color Invoice (रंगीन बिल)', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  SizedBox(
+                    height: 380,
+                    child: SingleChildScrollView(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Screenshot(
+                            controller: screenshotController,
+                            child: invoiceWidget,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final image = await screenshotController.capture(pixelRatio: 2.0);
+                          if (image == null) return;
+                          
+                          final directory = await getTemporaryDirectory();
+                          final imagePath = await File('${directory.path}/invoice_${billData['bill_number']}.png').create();
+                          await imagePath.writeAsBytes(image);
+                          
+                          final dueAmt = (billData['due_amount'] as num?)?.toDouble() ?? 0.0;
+                          final statusMsg = dueAmt > 0 
+                              ? 'Your remaining balance is ₹${dueAmt.toStringAsFixed(0)}.' 
+                              : 'Payment Status: PAID ✅';
+                          
+                          await Share.shareXFiles(
+                            [XFile(imagePath.path)], 
+                            text: 'नमस्कार ${billData['customer_name']},\n\nतुमचे रंगीन बिल (Color Invoice) सोबत जोडले आहे.\n$statusMsg\n\nधन्यवाद!'
+                          );
+                        } catch (e) {
+                          debugPrint('Error sharing color invoice image: $e');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      icon: const Icon(Icons.share_rounded, color: Colors.white),
+                      label: Text('Share Color Bill on WhatsApp', style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   void _showSelectBillWhatsAppSheet(BuildContext context) {
@@ -100,7 +228,9 @@ Thank you for shopping with us!
                     ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        _openWhatsAppChat(_mockBills[selectedIndex]);
+                        if (_customerBills.isNotEmpty) {
+                          _openWhatsAppChat(_customerBills[selectedIndex]);
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF25D366),
@@ -132,10 +262,10 @@ Thank you for shopping with us!
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _mockBills.length,
+                  itemCount: _customerBills.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
-                    final bill = _mockBills[i];
+                    final bill = _customerBills[i];
                     final isSelected = selectedIndex == i;
 
                     return GestureDetector(
@@ -174,11 +304,11 @@ Thank you for shopping with us!
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    bill['id'],
+                                    bill['bill_number'] ?? '',
                                     style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
                                   ),
                                   Text(
-                                    bill['date'],
+                                    bill['bill_date'] ?? '',
                                     style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 12),
                                   ),
                                 ],
@@ -188,7 +318,7 @@ Thank you for shopping with us!
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  bill['amount'],
+                                  '₹ ${bill['grand_total']}',
                                   style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
                                 ),
                                 Container(
@@ -222,7 +352,9 @@ Thank you for shopping with us!
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(ctx);
-                      _openWhatsAppChat(_mockBills[selectedIndex]);
+                      if (_customerBills.isNotEmpty) {
+                        _openWhatsAppChat(_customerBills[selectedIndex]);
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF25D366),
@@ -392,13 +524,14 @@ Thank you for shopping with us!
 
                   // 🌟 PRIMARY ACTION: CREATE NEW BILL (ONLY ACCESSIBLE HERE)
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => BillingScreen(customer: widget.customer),
                         ),
                       );
+                      _loadCustomerBills();
                     },
                     child: Container(
                       width: double.infinity,
@@ -455,12 +588,27 @@ Thank you for shopping with us!
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ..._mockBills.map((b) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildMockInvoiceCard(b['id'], b['amount'], b['date'], b['paid'], () {
-                      _openWhatsAppChat(b);
-                    }),
-                  )),
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _customerBills.isEmpty
+                          ? const Text('No bills found for this customer yet.')
+                          : Column(
+                              children: _customerBills.map((b) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildMockInvoiceCard(
+                                  b['bill_number'] ?? '', 
+                                  '₹ ${b['grand_total']}', 
+                                  b['bill_date'] ?? '', 
+                                  true, // Assuming paid for now
+                                  () {
+                                    _openWhatsAppChat(b);
+                                  },
+                                  onLongPress: () {
+                                    _showBillOptionsBottomSheet(b);
+                                  },
+                                ),
+                              )).toList(),
+                            ),
                 ],
               ),
             ),
@@ -470,8 +618,10 @@ Thank you for shopping with us!
     );
   }
 
-  Widget _buildMockInvoiceCard(String id, String amount, String date, bool paid, VoidCallback onShare) {
-    return Container(
+  Widget _buildMockInvoiceCard(String id, String amount, String date, bool paid, VoidCallback onShare, {VoidCallback? onLongPress}) {
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -549,6 +699,104 @@ Thank you for shopping with us!
                 tooltip: 'WhatsApp वर पाठवा',
               ),
             ],
+          ),
+        ],
+      ),
+    ),
+    );
+  }
+
+  void _showBillOptionsBottomSheet(Map<String, dynamic> bill) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final billNo = bill['bill_number'] ?? 'INV_${bill['id']}';
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Bill: $billNo',
+                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'Amount: ₹${bill['grand_total']}',
+                style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.share_rounded, color: Color(0xFF25D366)),
+                title: const Text('View & Share Color Bill (रंगीन बिल पहा/पाठवा)', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showColorInvoicePreview(bill);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: AppColors.royalBlue),
+                title: const Text('Edit Bill (बिल एडिट करा)', style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: bill)),
+                  );
+                  _loadCustomerBills();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+                title: const Text('Delete Bill (बिल डिलीट करा)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteBill(bill);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteBill(Map<String, dynamic> bill) {
+    final billId = bill['id'] is int ? bill['id'] as int : int.tryParse(bill['id'].toString()) ?? 0;
+    final billNo = bill['bill_number'] ?? 'INV_$billId';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Bill?', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete bill "$billNo"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              await DatabaseHelper.instance.deleteBill(billId);
+              if (mounted) {
+                Navigator.pop(ctx);
+                _loadCustomerBills();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Bill "$billNo" deleted!'), backgroundColor: Colors.redAccent),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

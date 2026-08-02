@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -7,6 +8,13 @@ class DatabaseHelper {
   static Database? _database;
 
   DatabaseHelper._init();
+
+  Future<void> closeAndReset() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -20,7 +28,10 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 10,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: _createDatabase,
       onUpgrade: _upgradeDatabase,
     );
@@ -40,6 +51,98 @@ class DatabaseHelper {
           updated_at TEXT
         )
       ''');
+    }
+    
+    if (oldVersion < 3) {
+      // Clear old data as requested by user
+      await db.execute('DROP TABLE IF EXISTS products');
+      await db.execute('DROP TABLE IF EXISTS customers');
+      await db.execute('DROP TABLE IF EXISTS bills');
+      await db.execute('DROP TABLE IF EXISTS bill_items');
+      await db.execute('DROP TABLE IF EXISTS purchases');
+      await db.execute('DROP TABLE IF EXISTS shop_settings');
+      
+      // Recreate all tables with the new schema including sync_logs
+      await _createDatabase(db, newVersion);
+    }
+    
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_logs(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          table_name TEXT NOT NULL,
+          action TEXT NOT NULL,
+          record_id TEXT NOT NULL,
+          data_json TEXT NOT NULL,
+          status TEXT DEFAULT 'pending',
+          created_at TEXT NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 5) {
+      try { await db.execute('ALTER TABLE bills ADD COLUMN paid_amount REAL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE bills ADD COLUMN due_amount REAL DEFAULT 0'); } catch (_) {}
+    }
+
+    if (oldVersion < 6) {
+      try { await db.execute('ALTER TABLE bills ADD COLUMN customer_id INTEGER'); } catch (_) {}
+    }
+
+    if (oldVersion < 7) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS suppliers(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          phone TEXT,
+          address TEXT,
+          total_purchased REAL DEFAULT 0,
+          total_paid REAL DEFAULT 0,
+          outstanding_due REAL DEFAULT 0,
+          created_at TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS supplier_payments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          supplier_name TEXT NOT NULL,
+          amount_paid REAL NOT NULL,
+          payment_method TEXT NOT NULL,
+          payment_date TEXT NOT NULL,
+          notes TEXT,
+          created_at TEXT NOT NULL
+        )
+      ''');
+
+      try { await db.execute('ALTER TABLE purchases ADD COLUMN total_amount REAL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE purchases ADD COLUMN paid_amount REAL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE purchases ADD COLUMN due_amount REAL DEFAULT 0'); } catch (_) {}
+      try { await db.execute('ALTER TABLE purchases ADD COLUMN product_name TEXT'); } catch (_) {}
+    }
+
+    if (oldVersion < 9) {
+      try { await db.execute('ALTER TABLE bills ADD COLUMN shop_name TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE bills ADD COLUMN shop_gstin TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE bills ADD COLUMN shop_address TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE bills ADD COLUMN shop_phone TEXT'); } catch (_) {}
+      try { await db.execute('ALTER TABLE bills ADD COLUMN gst REAL DEFAULT 0'); } catch (_) {}
+    }
+
+    if (oldVersion < 10) {
+      try {
+        await db.insert('products', {
+          'id': 0,
+          'product_name': 'Custom Item / Service',
+          'category': 'System',
+          'purchase_rate': 0.0,
+          'quantity': 0,
+          'low_stock_limit': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      } catch (e) {
+        // Ignore if exists
+      }
     }
   }
 
@@ -83,12 +186,15 @@ class DatabaseHelper {
       CREATE TABLE bills(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         bill_number TEXT NOT NULL UNIQUE,
+        customer_id INTEGER,
         customer_name TEXT,
         customer_mobile TEXT,
         subtotal REAL NOT NULL,
         discount REAL NOT NULL DEFAULT 0,
         gst REAL NOT NULL DEFAULT 0,
         grand_total REAL NOT NULL,
+        paid_amount REAL DEFAULT 0,
+        due_amount REAL DEFAULT 0,
         payment_method TEXT NOT NULL,
         bill_date TEXT NOT NULL,
         created_at TEXT NOT NULL
@@ -114,14 +220,17 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE purchases(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
+        product_id INTEGER,
+        product_name TEXT,
         supplier_name TEXT,
         purchase_rate REAL NOT NULL,
         quantity INTEGER NOT NULL,
+        total_amount REAL DEFAULT 0,
+        paid_amount REAL DEFAULT 0,
+        due_amount REAL DEFAULT 0,
         purchase_date TEXT NOT NULL,
         notes TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY(product_id) REFERENCES products(id)
+        created_at TEXT NOT NULL
       )
     ''');
 
@@ -139,35 +248,76 @@ class DatabaseHelper {
       )
     ''');
 
-    // SEED INITIAL DATA
-    final now = DateTime.now().toIso8601String();
-    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-
-    // Initial Products
-    await db.rawInsert('''
-      INSERT INTO products (product_name, category, purchase_rate, quantity, supplier_name, low_stock_limit, created_at)
-      VALUES 
-      ('Kanjivaram Silk Saree', 'Saree', 8000, 15, 'Varanasi Weavers', 5, ?),
-      ('Cotton Kurti - Block Print', 'Kurti', 600, 3, 'Jaipur Prints', 5, ?),
-      ('Bridal Lehenga Set', 'Lehenga', 28000, 2, 'Delhi Fashion', 5, ?),
-      ('Georgette Dupatta', 'Dupatta', 350, 25, 'Surat Mills', 5, ?),
-      ('Salwar Suit Set', 'Suit', 1800, 8, 'Ludhiana Apparel', 5, ?)
-    ''', [now, now, now, now, now]);
-
-    // Initial Bills
-    await db.rawInsert('''
-      INSERT INTO bills (bill_number, customer_name, customer_mobile, subtotal, discount, gst, grand_total, payment_method, bill_date, created_at)
-      VALUES 
-      ('INV00001', 'Priya Sharma', '9876543210', 3200, 0, 160, 3360, 'Cash', ?, ?),
-      ('INV00002', 'Rahul Mehta', '9123456789', 7850, 200, 392, 8042, 'UPI', ?, ?),
-      ('INV00003', 'Sunita Devi', '9345678901', 1100, 0, 55, 1155, 'Card', ?, ?)
-    ''', ['$todayStr 10:30:00', now, '$todayStr 12:15:00', now, '$todayStr 14:00:00', now]);
-
-    // Initial Shop Settings
-    await db.rawInsert('''
-      INSERT INTO shop_settings (shop_name, address, mobile, gst_number, footer)
-      VALUES ('RetailFlow', 'Main Market, Cloth Line', '9876543210', '27AAAAA0000A1Z5', 'Thank you for shopping with us!')
+    // SUPPLIERS TABLE
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS suppliers(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        phone TEXT,
+        address TEXT,
+        total_purchased REAL DEFAULT 0,
+        total_paid REAL DEFAULT 0,
+        outstanding_due REAL DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
     ''');
+
+    // SUPPLIER PAYMENTS TABLE
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS supplier_payments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        supplier_name TEXT NOT NULL,
+        amount_paid REAL NOT NULL,
+        payment_method TEXT NOT NULL,
+        payment_date TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // SYNC LOGS TABLE
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_name TEXT NOT NULL,
+        action TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        data_json TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // Insert Dummy Product for Custom Items (id = 0)
+    try {
+      await db.insert('products', {
+        'id': 0,
+        'product_name': 'Custom Item / Service',
+        'category': 'System',
+        'purchase_rate': 0.0,
+        'quantity': 0,
+        'low_stock_limit': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {}
+  }
+
+  // ==========================
+  // SYNC LOGGING HELPER
+  // ==========================
+  Future<void> _logSyncAction(DatabaseExecutor db, String tableName, String action, String recordId, Map<String, dynamic> data) async {
+    try {
+      await db.insert('sync_logs', {
+        'table_name': tableName,
+        'action': action,
+        'record_id': recordId,
+        'data_json': jsonEncode(data),
+        'status': 'pending',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      print('Sync Log Error: $e');
+    }
   }
 
   // ==========================
@@ -177,11 +327,13 @@ class DatabaseHelper {
   Future<int> addCustomer(Map<String, dynamic> customer) async {
     final db = await database;
     customer['created_at'] = DateTime.now().toIso8601String();
-    return await db.insert(
+    int id = await db.insert(
       'customers',
       customer,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await _logSyncAction(db, 'customers', 'INSERT', id.toString(), customer);
+    return id;
   }
 
   Future<List<Map<String, dynamic>>> getCustomers({int limit = 50, int offset = 0}) async {
@@ -209,21 +361,36 @@ class DatabaseHelper {
   Future<int> updateCustomer(int id, Map<String, dynamic> customer) async {
     final db = await database;
     customer['updated_at'] = DateTime.now().toIso8601String();
-    return await db.update(
+    int count = await db.update(
       'customers',
       customer,
       where: 'id = ?',
       whereArgs: [id],
     );
+    await _logSyncAction(db, 'customers', 'UPDATE', id.toString(), customer);
+    return count;
+  }
+
+  Future<int> updateCustomerDues(int id, double addedDues) async {
+    final db = await database;
+    int count = await db.rawUpdate('''
+      UPDATE customers
+      SET outstanding_balance = outstanding_balance + ?
+      WHERE id = ?
+    ''', [addedDues, id]);
+    await _logSyncAction(db, 'customers', 'UPDATE', id.toString(), {'added_dues': addedDues});
+    return count;
   }
 
   Future<int> deleteCustomer(int id) async {
     final db = await database;
-    return await db.delete(
+    int count = await db.delete(
       'customers',
       where: 'id = ?',
       whereArgs: [id],
     );
+    await _logSyncAction(db, 'customers', 'DELETE', id.toString(), {'id': id});
+    return count;
   }
 
   Future<List<Map<String, dynamic>>> searchCustomers(String keyword) async {
@@ -243,11 +410,13 @@ class DatabaseHelper {
   Future<int> addProduct(Map<String, dynamic> product) async {
     final db = await database;
 
-    return await db.insert(
+    int id = await db.insert(
       'products',
       product,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await _logSyncAction(db, 'products', 'INSERT', id.toString(), product);
+    return id;
   }
 
   Future<List<Map<String, dynamic>>> getProducts({int limit = 20, int offset = 0}) async {
@@ -286,22 +455,26 @@ class DatabaseHelper {
 
     product['updated_at'] = DateTime.now().toIso8601String();
 
-    return await db.update(
+    int count = await db.update(
       'products',
       product,
       where: 'id = ?',
       whereArgs: [id],
     );
+    await _logSyncAction(db, 'products', 'UPDATE', id.toString(), product);
+    return count;
   }
 
   Future<int> deleteProduct(int id) async {
     final db = await database;
 
-    return await db.delete(
+    int count = await db.delete(
       'products',
       where: 'id = ?',
       whereArgs: [id],
     );
+    await _logSyncAction(db, 'products', 'DELETE', id.toString(), {'id': id});
+    return count;
   }
 
   Future<List<Map<String, dynamic>>> searchProducts(
@@ -324,6 +497,8 @@ class DatabaseHelper {
       orderBy: 'product_name ASC',
     );
   }
+
+
 
   Future<List<Map<String, dynamic>>> getLowStockProducts() async {
     final db = await database;
@@ -437,6 +612,15 @@ class DatabaseHelper {
     final db = await database;
 
     return await db.transaction((txn) async {
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN customer_id INTEGER'); } catch (_) {}
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN paid_amount REAL DEFAULT 0'); } catch (_) {}
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN due_amount REAL DEFAULT 0'); } catch (_) {}
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN shop_name TEXT'); } catch (_) {}
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN shop_gstin TEXT'); } catch (_) {}
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN shop_address TEXT'); } catch (_) {}
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN shop_phone TEXT'); } catch (_) {}
+      try { await txn.execute('ALTER TABLE bills ADD COLUMN gst REAL DEFAULT 0'); } catch (_) {}
+
       final billId = await txn.insert(
         'bills',
         bill,
@@ -457,6 +641,151 @@ class DatabaseHelper {
           [item['quantity'], item['product_id']],
         );
       }
+
+      // Auto Upsert Customer Profile in Customers List & update dues/spending
+      final custMobile = (bill['customer_mobile'] ?? '').toString().trim();
+      final custName = (bill['customer_name'] ?? '').toString().trim();
+      final dueAmount = (bill['due_amount'] as num?)?.toDouble() ?? 0.0;
+      final grandTotal = (bill['grand_total'] as num?)?.toDouble() ?? 0.0;
+
+      if (custName.isNotEmpty && custMobile.isNotEmpty && custMobile != 'N/A') {
+        final existingCust = await txn.query('customers', where: 'phone = ?', whereArgs: [custMobile], limit: 1);
+        if (existingCust.isNotEmpty) {
+          final cId = existingCust.first['id'] as int;
+          await txn.rawUpdate(
+            'UPDATE customers SET total_spent = total_spent + ?, outstanding_balance = outstanding_balance + ?, name = ? WHERE id = ?',
+            [grandTotal, dueAmount, custName, cId],
+          );
+        } else {
+          await txn.insert('customers', {
+            'name': custName,
+            'phone': custMobile,
+            'address': '',
+            'total_spent': grandTotal,
+            'outstanding_balance': dueAmount,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+      
+      // Log bill creation for sync
+      await _logSyncAction(txn, 'bills', 'INSERT', billId.toString(), {
+        'bill': bill,
+        'items': items,
+      });
+      
+      return billId;
+    });
+  }
+
+  Future<int> updateCompleteBill(int billId, Map<String, dynamic> bill, List<Map<String, dynamic>> items) async {
+    final db = await database;
+
+    return await db.transaction((txn) async {
+      // 1. Revert Old Bill Effects
+      final oldBills = await txn.query('bills', where: 'id = ?', whereArgs: [billId], limit: 1);
+      if (oldBills.isNotEmpty) {
+        final oldBill = oldBills.first;
+        final oldItems = await txn.query('bill_items', where: 'bill_id = ?', whereArgs: [billId]);
+
+        // Restore old product stock
+        for (var item in oldItems) {
+          final pId = (item['product_id'] as int?) ?? 0;
+          final qty = (item['quantity'] as int?) ?? 0;
+          if (pId > 0 && qty > 0) {
+            await txn.rawUpdate(
+              'UPDATE products SET quantity = quantity + ? WHERE id = ?',
+              [qty, pId],
+            );
+          }
+        }
+
+        // Revert old Customer Total Spent & Outstanding Balance
+        final oldCustMobile = (oldBill['customer_mobile'] ?? '').toString().trim();
+        final oldGrandTotal = (oldBill['grand_total'] as num?)?.toDouble() ?? 0.0;
+        final oldDueAmount = (oldBill['due_amount'] as num?)?.toDouble() ?? 0.0;
+
+        if (oldCustMobile.isNotEmpty && oldCustMobile != 'N/A') {
+          final existingCust = await txn.query('customers', where: 'phone = ?', whereArgs: [oldCustMobile], limit: 1);
+          if (existingCust.isNotEmpty) {
+            final cId = existingCust.first['id'] as int;
+            final curSpent = (existingCust.first['total_spent'] as num?)?.toDouble() ?? 0.0;
+            final curDues = (existingCust.first['outstanding_balance'] as num?)?.toDouble() ?? 0.0;
+            final newSpent = (curSpent - oldGrandTotal) > 0 ? (curSpent - oldGrandTotal) : 0.0;
+            final newDues = (curDues - oldDueAmount) > 0 ? (curDues - oldDueAmount) : 0.0;
+
+            await txn.update(
+              'customers',
+              {
+                'total_spent': newSpent,
+                'outstanding_balance': newDues,
+              },
+              where: 'id = ?',
+              whereArgs: [cId],
+            );
+          }
+        }
+
+        // Delete old bill items
+        await txn.delete('bill_items', where: 'bill_id = ?', whereArgs: [billId]);
+      }
+
+      // 2. Update Bill Record
+      await txn.update(
+        'bills',
+        bill,
+        where: 'id = ?',
+        whereArgs: [billId],
+      );
+
+      // 3. Apply New Bill Effects
+      for (var item in items) {
+        item['bill_id'] = billId;
+        await txn.insert('bill_items', item);
+
+        // Decrease stock
+        await txn.rawUpdate(
+          '''
+          UPDATE products
+          SET quantity = quantity - ?
+          WHERE id = ?
+          ''',
+          [item['quantity'], item['product_id']],
+        );
+      }
+
+      // Apply New Customer Balances
+      final custMobile = (bill['customer_mobile'] ?? '').toString().trim();
+      final custName = (bill['customer_name'] ?? '').toString().trim();
+      final dueAmount = (bill['due_amount'] as num?)?.toDouble() ?? 0.0;
+      final grandTotal = (bill['grand_total'] as num?)?.toDouble() ?? 0.0;
+
+      if (custName.isNotEmpty && custMobile.isNotEmpty && custMobile != 'N/A') {
+        final existingCust = await txn.query('customers', where: 'phone = ?', whereArgs: [custMobile], limit: 1);
+        if (existingCust.isNotEmpty) {
+          final cId = existingCust.first['id'] as int;
+          await txn.rawUpdate(
+            'UPDATE customers SET total_spent = total_spent + ?, outstanding_balance = outstanding_balance + ?, name = ? WHERE id = ?',
+            [grandTotal, dueAmount, custName, cId],
+          );
+        } else {
+          await txn.insert('customers', {
+            'name': custName,
+            'phone': custMobile,
+            'address': '',
+            'total_spent': grandTotal,
+            'outstanding_balance': dueAmount,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+      
+      // Log bill update for sync
+      await _logSyncAction(txn, 'bills', 'UPDATE', billId.toString(), {
+        'bill': bill,
+        'items': items,
+      });
+      
       return billId;
     });
   }
@@ -481,8 +810,67 @@ class DatabaseHelper {
   Future<int> deleteBill(int id) async {
     final db = await database;
 
-    return await db.delete(
+    return await db.transaction((txn) async {
+      final bills = await txn.query('bills', where: 'id = ?', whereArgs: [id], limit: 1);
+      if (bills.isEmpty) return 0;
+      final bill = bills.first;
+
+      final items = await txn.query('bill_items', where: 'bill_id = ?', whereArgs: [id]);
+
+      // 1. Restore product stock
+      for (var item in items) {
+        final pId = (item['product_id'] as int?) ?? 0;
+        final qty = (item['quantity'] as int?) ?? 0;
+        if (pId > 0 && qty > 0) {
+          await txn.rawUpdate(
+            'UPDATE products SET quantity = quantity + ? WHERE id = ?',
+            [qty, pId],
+          );
+        }
+      }
+
+      // 2. Adjust Customer Total Spent & Outstanding Balance
+      final custMobile = (bill['customer_mobile'] ?? '').toString().trim();
+      final grandTotal = (bill['grand_total'] as num?)?.toDouble() ?? 0.0;
+      final dueAmount = (bill['due_amount'] as num?)?.toDouble() ?? 0.0;
+
+      if (custMobile.isNotEmpty && custMobile != 'N/A') {
+        final existingCust = await txn.query('customers', where: 'phone = ?', whereArgs: [custMobile], limit: 1);
+        if (existingCust.isNotEmpty) {
+          final cId = existingCust.first['id'] as int;
+          final curSpent = (existingCust.first['total_spent'] as num?)?.toDouble() ?? 0.0;
+          final curDues = (existingCust.first['outstanding_balance'] as num?)?.toDouble() ?? 0.0;
+          final newSpent = (curSpent - grandTotal) > 0 ? (curSpent - grandTotal) : 0.0;
+          final newDues = (curDues - dueAmount) > 0 ? (curDues - dueAmount) : 0.0;
+
+          await txn.update(
+            'customers',
+            {
+              'total_spent': newSpent,
+              'outstanding_balance': newDues,
+            },
+            where: 'id = ?',
+            whereArgs: [cId],
+          );
+        }
+      }
+
+      // 3. Delete bill items and bill
+      await txn.delete('bill_items', where: 'bill_id = ?', whereArgs: [id]);
+      final count = await txn.delete('bills', where: 'id = ?', whereArgs: [id]);
+
+      // 4. Log Sync action
+      await _logSyncAction(txn, 'bills', 'DELETE', id.toString(), {'id': id, 'bill_number': bill['bill_number']});
+
+      return count;
+    });
+  }
+
+  Future<int> updateBill(int id, Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.update(
       'bills',
+      data,
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -517,6 +905,48 @@ class DatabaseHelper {
       ],
       orderBy: 'id DESC',
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getCustomerBills(int customerId, {String? customerName, String? customerPhone}) async {
+    final db = await database;
+    if ((customerPhone != null && customerPhone.isNotEmpty) || (customerName != null && customerName.isNotEmpty)) {
+      return await db.query(
+        'bills',
+        where: 'customer_id = ? OR (customer_mobile != "" AND customer_mobile = ?) OR (customer_name != "" AND customer_name = ?)',
+        whereArgs: [customerId, customerPhone ?? '', customerName ?? ''],
+        orderBy: 'id DESC',
+      );
+    }
+    return await db.query(
+      'bills',
+      where: 'customer_id = ?',
+      whereArgs: [customerId],
+      orderBy: 'id DESC',
+    );
+  }
+
+  Future<int> getTotalCustomersCount() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT COUNT(*) as count FROM customers');
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
+  Future<int> getTotalProductsCount() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT COUNT(*) as count FROM products');
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
+  Future<int> getPendingCustomersCount() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT COUNT(*) as count FROM customers WHERE outstanding_balance > 0');
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
+  Future<double> getTotalOutstandingAmount() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT SUM(outstanding_balance) as total FROM customers');
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
   // ==========================
@@ -694,5 +1124,199 @@ class DatabaseHelper {
     }
 
     return weeklySales;
+  }
+
+  // ==========================
+  // 9. SUPPLIER & PURCHASE LEDGER CRUD
+  // ==========================
+
+  Future<int> addSupplier(Map<String, dynamic> supplier) async {
+    final db = await database;
+    supplier['created_at'] = DateTime.now().toIso8601String();
+    return await db.insert('suppliers', supplier, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<Map<String, dynamic>>> getSuppliers() async {
+    final db = await database;
+    return await db.query('suppliers', orderBy: 'name ASC');
+  }
+
+  Future<Map<String, dynamic>?> getSupplierByName(String name) async {
+    final db = await database;
+    final res = await db.query('suppliers', where: 'name = ?', whereArgs: [name], limit: 1);
+    return res.isNotEmpty ? res.first : null;
+  }
+
+  Future<int> updateSupplier(int id, Map<String, dynamic> supplier) async {
+    final db = await database;
+    return await db.update('suppliers', supplier, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteSupplier(int id) async {
+    final db = await database;
+    return await db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> recordPurchase({
+    required String productName,
+    required String supplierName,
+    required double purchaseRate,
+    required int quantity,
+    required double paidAmount,
+    String? supplierPhone,
+    String? notes,
+  }) async {
+    final db = await database;
+    final totalAmount = purchaseRate * quantity;
+    final dueAmount = (totalAmount - paidAmount) > 0 ? (totalAmount - paidAmount) : 0.0;
+    final nowStr = DateTime.now().toIso8601String();
+
+    return await db.transaction((txn) async {
+      // 1. Insert Purchase
+      final purchaseId = await txn.insert('purchases', {
+        'product_id': 0,
+        'product_name': productName,
+        'supplier_name': supplierName,
+        'purchase_rate': purchaseRate,
+        'quantity': quantity,
+        'total_amount': totalAmount,
+        'paid_amount': paidAmount,
+        'due_amount': dueAmount,
+        'purchase_date': nowStr,
+        'notes': notes ?? '',
+        'created_at': nowStr,
+      });
+
+      // 2. Update Stock if product exists or create product
+      final existingProds = await txn.query('products', where: 'product_name = ?', whereArgs: [productName], limit: 1);
+      if (existingProds.isNotEmpty) {
+        final pId = existingProds.first['id'] as int;
+        await txn.rawUpdate(
+          'UPDATE products SET quantity = quantity + ?, purchase_rate = ? WHERE id = ?',
+          [quantity, purchaseRate, pId],
+        );
+      } else {
+        await txn.insert('products', {
+          'product_name': productName,
+          'category': 'General',
+          'purchase_rate': purchaseRate,
+          'quantity': quantity,
+          'supplier_name': supplierName,
+          'purchase_date': nowStr,
+          'notes': notes ?? '',
+          'low_stock_limit': 5,
+          'created_at': nowStr,
+        });
+      }
+
+      // 3. Upsert Supplier ledger
+      final existingSup = await txn.query('suppliers', where: 'name = ?', whereArgs: [supplierName], limit: 1);
+      if (existingSup.isNotEmpty) {
+        final supId = existingSup.first['id'] as int;
+        final curPurchased = (existingSup.first['total_purchased'] as num?)?.toDouble() ?? 0.0;
+        final curPaid = (existingSup.first['total_paid'] as num?)?.toDouble() ?? 0.0;
+        final newPurchased = curPurchased + totalAmount;
+        final newPaid = curPaid + paidAmount;
+        final newDue = (newPurchased - newPaid) > 0 ? (newPurchased - newPaid) : 0.0;
+
+        await txn.update(
+          'suppliers',
+          {
+            'total_purchased': newPurchased,
+            'total_paid': newPaid,
+            'outstanding_due': newDue,
+            if (supplierPhone != null && supplierPhone.isNotEmpty) 'phone': supplierPhone,
+          },
+          where: 'id = ?',
+          whereArgs: [supId],
+        );
+      } else {
+        await txn.insert('suppliers', {
+          'name': supplierName,
+          'phone': supplierPhone ?? '',
+          'address': '',
+          'total_purchased': totalAmount,
+          'total_paid': paidAmount,
+          'outstanding_due': dueAmount,
+          'created_at': nowStr,
+        });
+      }
+
+      await _logSyncAction(txn, 'purchases', 'INSERT', purchaseId.toString(), {
+        'product_name': productName,
+        'supplier_name': supplierName,
+        'purchase_rate': purchaseRate,
+        'quantity': quantity,
+        'total_amount': totalAmount,
+        'paid_amount': paidAmount,
+        'due_amount': dueAmount,
+      });
+
+      return purchaseId;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchasesBySupplier(String supplierName) async {
+    final db = await database;
+    return await db.query('purchases', where: 'supplier_name = ?', whereArgs: [supplierName], orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPurchases() async {
+    final db = await database;
+    return await db.query('purchases', orderBy: 'id DESC');
+  }
+
+  Future<int> recordSupplierPayment({
+    required String supplierName,
+    required double amountPaid,
+    required String paymentMethod,
+    String? notes,
+  }) async {
+    final db = await database;
+    final nowStr = DateTime.now().toIso8601String();
+
+    return await db.transaction((txn) async {
+      final payId = await txn.insert('supplier_payments', {
+        'supplier_name': supplierName,
+        'amount_paid': amountPaid,
+        'payment_method': paymentMethod,
+        'payment_date': nowStr,
+        'notes': notes ?? '',
+        'created_at': nowStr,
+      });
+
+      final existingSup = await txn.query('suppliers', where: 'name = ?', whereArgs: [supplierName], limit: 1);
+      if (existingSup.isNotEmpty) {
+        final supId = existingSup.first['id'] as int;
+        final curPaid = (existingSup.first['total_paid'] as num?)?.toDouble() ?? 0.0;
+        final curPurchased = (existingSup.first['total_purchased'] as num?)?.toDouble() ?? 0.0;
+        final newPaid = curPaid + amountPaid;
+        final newDue = (curPurchased - newPaid) > 0 ? (curPurchased - newPaid) : 0.0;
+
+        await txn.update(
+          'suppliers',
+          {
+            'total_paid': newPaid,
+            'outstanding_due': newDue,
+          },
+          where: 'id = ?',
+          whereArgs: [supId],
+        );
+      }
+
+      await _logSyncAction(txn, 'supplier_payments', 'INSERT', payId.toString(), {
+        'supplier_name': supplierName,
+        'amount_paid': amountPaid,
+        'payment_method': paymentMethod,
+        'payment_date': nowStr,
+      });
+
+      return payId;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getSupplierPayments(String supplierName) async {
+    final db = await database;
+    return await db.query('supplier_payments', where: 'supplier_name = ?', whereArgs: [supplierName], orderBy: 'id DESC');
   }
 }

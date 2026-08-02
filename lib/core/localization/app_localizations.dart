@@ -201,7 +201,7 @@ class AppLocalizations {
   };
 
   String translate(String key) {
-    return _localizedValues[locale.languageCode]?[key] ?? _localizedValues['en']?[key] ?? key;
+    return _localizedValues['en']?[key] ?? key;
   }
 }
 

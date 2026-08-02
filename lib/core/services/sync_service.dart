@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import 'cloudflare_api_service.dart';
 
 /// Service to handle background sync with Cloudflare Workers + D1 SQLite database + Cloudflare R2 backup.
-/// It monitors local SQLite changes and synchronizes them to the remote database
-/// efficiently to support multi-device retail management.
 class SyncService {
   static final SyncService _instance = SyncService._internal();
   factory SyncService() => _instance;
@@ -34,22 +33,55 @@ class SyncService {
     debugPrint('Stopped Cloudflare background sync service.');
   }
 
-  /// Perform the actual synchronization with Cloudflare Workers API (D1 & R2)
+  /// Perform the actual synchronization with Cloudflare Workers API
   Future<void> _performSync() async {
     if (_isSyncing) return;
     _isSyncing = true;
 
     try {
-      // Access local SQLite DB via DatabaseHelper
-      final localProducts = await _dbHelper.getProducts();
-      debugPrint('Local SQLite DB has ${localProducts.length} products.');
+      final db = await _dbHelper.database;
       
-      // Sync customers from Cloudflare D1
-      final remoteCustomers = await CloudflareApiService.fetchCustomersFromCloudflare();
-      debugPrint('Cloudflare D1 returned ${remoteCustomers.length} synced records.');
+      // 1. SYNC UP (Push local changes)
+      final pendingLogs = await db.query(
+        'sync_logs',
+        where: 'status = ?',
+        whereArgs: ['pending'],
+      );
 
-      await Future.delayed(const Duration(seconds: 1));
-      debugPrint('Cloudflare D1 & R2 Sync completed successfully.');
+      if (pendingLogs.isNotEmpty) {
+        debugPrint('Found ${pendingLogs.length} pending sync logs to push.');
+        
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('auth_token');
+        
+        if (token != null) {
+          final result = await CloudflareApiService.pushSyncLogs(pendingLogs, token);
+          
+          if (result['success'] == true) {
+            // Delete synced logs
+            final ids = pendingLogs.map((l) => l['id']).toList();
+            await db.delete(
+              'sync_logs',
+              where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+              whereArgs: ids,
+            );
+            debugPrint('Successfully pushed and cleared ${ids.length} sync logs.');
+          } else {
+            debugPrint('Failed to push sync logs: ${result['message']}');
+          }
+        } else {
+          debugPrint('No auth token found, skipping sync up.');
+        }
+      }
+
+      // 2. SYNC DOWN (Pull remote changes)
+      // For now, we will fetch customers to test the sync down process
+      final remoteCustomers = await CloudflareApiService.fetchCustomersFromCloudflare();
+      if (remoteCustomers.isNotEmpty) {
+        debugPrint('Cloudflare D1 returned ${remoteCustomers.length} synced customers.');
+        // TODO: Merge remote changes into local SQLite (Conflict resolution)
+      }
+
     } catch (e) {
       debugPrint('Cloudflare Sync failed: $e');
     } finally {
@@ -57,9 +89,8 @@ class SyncService {
     }
   }
 
-  /// Force an immediate sync (e.g. on Pull to Refresh)
+  /// Force an immediate sync
   Future<void> forceSync() async {
     await _performSync();
   }
 }
-

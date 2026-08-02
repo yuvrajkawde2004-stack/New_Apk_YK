@@ -57,8 +57,6 @@ class RetailFlowApp extends StatelessWidget {
       locale: localeProvider.locale,
       supportedLocales: const [
         Locale('en'),
-        Locale('mr'),
-        Locale('hi'),
       ],
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -66,7 +64,7 @@ class RetailFlowApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      initialRoute: '/login',
+      initialRoute: '/splash',
       routes: {
         '/splash': (_) => const SplashScreen(),
         '/login': (_) => const OtpLoginScreen(),
