@@ -16,6 +16,13 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> wipeEntireDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'shop_database.db');
+    await closeAndReset();
+    await deleteDatabase(path);
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB('shop_database.db');
@@ -28,7 +35,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -153,6 +160,20 @@ class DatabaseHelper {
         await db.delete('bill_items');
         await db.delete('sync_logs');
       } catch (_) {}
+    }
+
+    if (oldVersion < 12) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS customer_payments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER NOT NULL,
+          bill_id INTEGER NOT NULL,
+          amount_paid REAL NOT NULL,
+          payment_method TEXT NOT NULL,
+          payment_date TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -298,6 +319,19 @@ class DatabaseHelper {
       )
     ''');
 
+    // CUSTOMER PAYMENTS TABLE
+    await db.execute('''
+      CREATE TABLE customer_payments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        bill_id INTEGER NOT NULL,
+        amount_paid REAL NOT NULL,
+        payment_method TEXT NOT NULL,
+        payment_date TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    
     // Insert Dummy Product for Custom Items (id = 0)
     try {
       await db.insert('products', {
@@ -979,6 +1013,39 @@ class DatabaseHelper {
   }
 
   // ==========================
+  // CUSTOMER PAYMENTS
+  // ==========================
+  Future<void> recordCustomerPayment(int customerId, int billId, double amount, String method, String paymentDate) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // 1. Insert into customer_payments
+      await txn.insert('customer_payments', {
+        'customer_id': customerId,
+        'bill_id': billId,
+        'amount_paid': amount,
+        'payment_method': method,
+        'payment_date': paymentDate,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      // 2. Update bills table
+      await txn.rawUpdate('''
+        UPDATE bills
+        SET paid_amount = paid_amount + ?,
+            due_amount = MAX(0, due_amount - ?)
+        WHERE id = ?
+      ''', [amount, amount, billId]);
+
+      // 3. Update customers table
+      await txn.rawUpdate('''
+        UPDATE customers
+        SET outstanding_balance = MAX(0, outstanding_balance - ?)
+        WHERE id = ?
+      ''', [amount, customerId]);
+    });
+  }
+
+  // ==========================
   // 7. SHOP SETTINGS
   // ==========================
 
@@ -1078,6 +1145,36 @@ class DatabaseHelper {
     );
 
     return (result.first['total'] as num?)?.toDouble() ?? 0;
+  }
+
+  Future<double> getProfitForPeriod(String period) async {
+    final db = await database;
+    String dateCondition = '';
+    List<dynamic> args = [];
+
+    final today = DateTime.now();
+
+    if (period == 'Daily') {
+      dateCondition = 'WHERE b.bill_date LIKE ?';
+      args.add('${today.toIso8601String().substring(0, 10)}%');
+    } else if (period == 'Monthly') {
+      dateCondition = 'WHERE b.bill_date LIKE ?';
+      args.add('${today.toIso8601String().substring(0, 7)}%');
+    } else if (period == 'Weekly') {
+      final weekAgoStr = today.subtract(const Duration(days: 7)).toIso8601String().substring(0, 10);
+      dateCondition = 'WHERE SUBSTR(b.bill_date, 1, 10) >= ?';
+      args.add(weekAgoStr);
+    }
+
+    final result = await db.rawQuery('''
+      SELECT SUM((bi.selling_price - COALESCE(p.purchase_rate, 0)) * bi.quantity) as profit
+      FROM bill_items bi
+      JOIN bills b ON bi.bill_id = b.id
+      LEFT JOIN products p ON bi.product_id = p.id
+      $dateCondition
+    ''', args);
+
+    return (result.first['profit'] as num?)?.toDouble() ?? 0.0;
   }
 
   // Recent Bills (Last 5 bills)

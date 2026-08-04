@@ -203,22 +203,9 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
 
     if (result['success'] == true) {
       setState(() {
-        _otpTimer = 30;
+        _otpTimer = 0; // Removed wait timer for instant resend
       });
       _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (!mounted) {
-          timer.cancel();
-          return;
-        }
-        setState(() {
-          if (_otpTimer > 0) {
-            _otpTimer--;
-          } else {
-            timer.cancel();
-          }
-        });
-      });
 
       // Auto-fill OTP for easier testing since SMS might not arrive
       if (result['debug_otp'] != null) {

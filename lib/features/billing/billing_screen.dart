@@ -695,100 +695,113 @@ class _BillingScreenState extends State<BillingScreen> {
   Widget build(BuildContext context) {
     final fmt = NumberFormat('#,##,##0.00');
     final loc = AppLocalizations.of(context);
+    final todayStr = DateFormat('dd MMM yyyy').format(DateTime.now());
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC), // Premium light gray background
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.billToEdit != null ? 'Edit Bill' : 'Create Bill',
+          style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.royalBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.royalBlue),
+                const SizedBox(width: 4),
+                Text(
+                  todayStr,
+                  style: GoogleFonts.outfit(color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            // 🌟 Premium White Header
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      Row(
+            // 👤 Customer Card
+            GestureDetector(
+              onTap: _showCustomerSelectionSheet,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.royalBlue.withValues(alpha: 0.15),
+                      child: Text(
+                        (_selectedCustomer?.name.isNotEmpty == true) ? _selectedCustomer!.name[0].toUpperCase() : 'C',
+                        style: GoogleFonts.outfit(color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
-                              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 18),
-                            ),
+                          Text(
+                            _selectedCustomer?.name ?? 'Select Customer (Walk-in)',
+                            style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15),
                           ),
-                          const SizedBox(width: 16),
-                          Text('Premium Invoice', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
-                            ),
-                            child: Text('PRO', style: GoogleFonts.outfit(color: const Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1)),
+                          const SizedBox(height: 2),
+                          Text(
+                            _selectedCustomer?.phone ?? 'Tap here to pick customer from list ▾',
+                            style: GoogleFonts.outfit(color: AppColors.royalBlue, fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      GestureDetector(
-                        onTap: _showCustomerSelectionSheet,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AppColors.royalBlue.withValues(alpha: 0.15),
-                                child: Text((_selectedCustomer?.name.isNotEmpty == true) ? _selectedCustomer!.name[0].toUpperCase() : 'C',
-                                    style: GoogleFonts.outfit(color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontSize: 18)),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(_selectedCustomer?.name ?? 'Select Customer (Walk-in)',
-                                        style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15)),
-                                    const SizedBox(height: 2),
-                                    Text(_selectedCustomer?.phone ?? 'Tap here to pick customer from list ▾',
-                                        style: GoogleFonts.outfit(color: AppColors.royalBlue, fontSize: 11, fontWeight: FontWeight.w600)),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.arrow_drop_down_circle_rounded, color: AppColors.royalBlue, size: 22),
-                            ],
-                          ),
-                        ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.royalBlue.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Change', style: GoogleFonts.outfit(color: AppColors.royalBlue, fontSize: 11, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.royalBlue, size: 16),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ).animate().slideY(begin: -0.1).fadeIn(),
+            ),
 
             // 🔍 Search Bar & Dropdown
             Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -925,7 +938,7 @@ class _BillingScreenState extends State<BillingScreen> {
                           Icon(Icons.shopping_basket_rounded, size: 80, color: AppColors.royalBlue.withValues(alpha: 0.15)),
                           const SizedBox(height: 16),
                           Text('Cart is empty', style: GoogleFonts.outfit(color: AppColors.textPrimaryLight, fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text('Add items to create a premium invoice', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 14)),
+                          Text('Add items from stock or enter product name above', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 13)),
                         ],
                       ).animate().fadeIn().scale(),
                     )
@@ -1044,7 +1057,7 @@ class _BillingScreenState extends State<BillingScreen> {
                     ),
             ),
 
-            // 🧾 Premium Footer
+            // 🧾 Footer
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -1054,7 +1067,7 @@ class _BillingScreenState extends State<BillingScreen> {
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1134,7 +1147,7 @@ class _BillingScreenState extends State<BillingScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              _dueAmount > 0 ? 'Your remaining balance is ₹${fmt.format(_dueAmount)}' : 'Payment Status: PAID ✅',
+                              _dueAmount > 0 ? 'Remaining balance is ₹${fmt.format(_dueAmount)}' : 'Payment Status: PAID ✅',
                               style: GoogleFonts.outfit(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
@@ -1144,7 +1157,7 @@ class _BillingScreenState extends State<BillingScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       
                       // Payment Methods
                       SizedBox(
@@ -1173,14 +1186,14 @@ class _BillingScreenState extends State<BillingScreen> {
                           }).toList(),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Generate Button
                       GestureDetector(
                         onTap: _processPayment,
                         child: Container(
                           width: double.infinity,
-                          height: 56,
+                          height: 54,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(colors: [AppColors.royalBlue, Color(0xFF2563EB)]),
                             borderRadius: BorderRadius.circular(20),
@@ -1210,6 +1223,7 @@ class _BillingScreenState extends State<BillingScreen> {
       ),
     );
   }
+
 
   Widget _qtyBtn(IconData icon, VoidCallback onTap) {
     return GestureDetector(

@@ -1124,10 +1124,19 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
   }
 
   Widget _inputField(TextEditingController controller, String label, IconData icon, [TextInputType? type]) {
+    final isPhone = type == TextInputType.phone;
     return TextField(
       controller: controller,
       keyboardType: type,
+      maxLength: isPhone ? 10 : null,
+      inputFormatters: isPhone ? [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(10),
+      ] : null,
       decoration: InputDecoration(
+        counterText: '',
+        prefixText: isPhone ? '+91 ' : null,
+        prefixStyle: isPhone ? const TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue) : null,
         labelText: label,
         prefixIcon: Icon(icon, color: AppColors.royalBlue),
         filled: true,

@@ -160,14 +160,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 10),
               _buildCard([
                 _settingTile(
-                  icon: Icons.cleaning_services_rounded,
-                  color: Colors.redAccent,
-                  title: 'Clear All Test Data & Reset DB',
-                  subtitle: 'Wipe test products & start fresh with real products',
-                  onTap: () => _showResetDatabaseDialog(context),
-                ),
-                _divider(),
-                _settingTile(
                   icon: Icons.restore_from_trash_rounded,
                   color: const Color(0xFFEA580C),
                   title: 'Re-add Deleted Suppliers',

@@ -646,76 +646,82 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
+            Expanded(
+              child: Row(
+                children: [
+                  // Status Circle Indicator: RED for Pending, GREEN for Paid
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: statusColor, width: 1.8),
+                    ),
+                    child: Icon(
+                      paid ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
+                      color: statusColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          id,
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          date,
+                          style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Status Circle Indicator: RED for Pending, GREEN for Paid
+                Text(
+                  amount,
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimaryLight),
+                ),
+                const SizedBox(height: 4),
                 Container(
-                  width: 44,
-                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: statusColor, width: 1.8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    paid ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
-                    color: statusColor,
-                    size: 22,
+                  child: Text(
+                    paid ? 'Paid ✅' : 'Due: ₹${dueAmount.toStringAsFixed(0)} 🔴',
+                    style: GoogleFonts.outfit(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      id,
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      date,
-                      style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 12),
-                    ),
-                  ],
                 ),
               ],
             ),
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      amount,
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimaryLight),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        paid ? 'Paid ✅' : 'Due: ₹${dueAmount.toStringAsFixed(0)} 🔴',
-                        style: GoogleFonts.outfit(
-                          color: statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 20),
-                  onPressed: onShare,
-                  tooltip: 'Send on WhatsApp',
-                ),
-              ],
+            const SizedBox(width: 4),
+            IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 22),
+              onPressed: onShare,
+              tooltip: 'Send on WhatsApp',
             ),
           ],
         ),
@@ -751,6 +757,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13),
               ),
               const SizedBox(height: 20),
+              if ((bill['due_amount'] as num?)?.toDouble() ?? 0.0 > 0)
+                ListTile(
+                  leading: const Icon(Icons.payments_rounded, color: Color(0xFF10B981)),
+                  title: const Text('Receive Payment', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF10B981))),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showReceivePaymentSheet(bill);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.share_rounded, color: Color(0xFF25D366)),
                 title: const Text('View & Share Color Bill', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -816,6 +831,225 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showReceivePaymentSheet(Map<String, dynamic> bill) {
+    final billId = bill['id'] is int ? bill['id'] as int : int.tryParse(bill['id'].toString()) ?? 0;
+    final billNo = bill['bill_number'] ?? 'INV_$billId';
+    final dueAmount = (bill['due_amount'] as num?)?.toDouble() ?? 0.0;
+    
+    double amountToPay = dueAmount;
+    String paymentMethod = 'Cash';
+    DateTime paymentDate = DateTime.now();
+    final amountController = TextEditingController(text: dueAmount.toStringAsFixed(0));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48, height: 6,
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(3)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.15), shape: BoxShape.circle),
+                        child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF10B981), size: 28),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Receive Payment', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight)),
+                            Text('Invoice: $billNo', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Due Amount Banner
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)]),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Pending Due', style: GoogleFonts.outfit(color: const Color(0xFFB45309), fontWeight: FontWeight.w600, fontSize: 15)),
+                        Text('₹${dueAmount.toStringAsFixed(0)}', style: GoogleFonts.outfit(color: const Color(0xFF92400E), fontWeight: FontWeight.w900, fontSize: 20)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Amount Input
+                  Text('Amount Received (₹)', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondaryLight)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.currency_rupee_rounded, color: AppColors.royalBlue),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.royalBlue, width: 2)),
+                    ),
+                    onChanged: (val) {
+                      amountToPay = double.tryParse(val) ?? 0.0;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Date Picker & Payment Mode
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Date', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondaryLight)),
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: paymentDate,
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) {
+                                  setModalState(() => paymentDate = picked);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(16)),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.royalBlue),
+                                    const SizedBox(width: 8),
+                                    Text('${paymentDate.day}/${paymentDate.month}/${paymentDate.year}', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Payment Mode', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondaryLight)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(16)),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: paymentMethod,
+                                  isExpanded: true,
+                                  items: ['Cash', 'UPI', 'Card', 'Bank Transfer'].map((m) => DropdownMenuItem(value: m, child: Text(m, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)))).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setModalState(() => paymentMethod = val);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // Confirm Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (amountToPay <= 0) return;
+                        if (amountToPay > dueAmount) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot pay more than due amount!'), backgroundColor: Colors.redAccent));
+                          return;
+                        }
+
+                        Navigator.pop(ctx);
+                        
+                        // Save payment
+                        await DatabaseHelper.instance.recordCustomerPayment(
+                          widget.customer.id ?? 0,
+                          billId,
+                          amountToPay,
+                          paymentMethod,
+                          paymentDate.toIso8601String(),
+                        );
+
+                        // Refresh UI
+                        _loadCustomerBills();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                  const SizedBox(width: 10),
+                                  Text('₹${amountToPay.toStringAsFixed(0)} payment received!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              backgroundColor: const Color(0xFF10B981),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        elevation: 4,
+                        shadowColor: const Color(0xFF10B981).withOpacity(0.4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      child: Text('CONFIRM PAYMENT', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

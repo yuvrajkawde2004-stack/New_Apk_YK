@@ -58,6 +58,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       selectedPurchasesCost = totalPurchasesCost;
     }
 
+    final double estProfit = await db.getProfitForPeriod(_period);
+
     return {
       'sales': selectedSales,
       'todaySales': todaySales,
@@ -67,6 +69,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'supplierDues': supplierDues,
       'totalPurchasesCost': selectedPurchasesCost,
       'weeklySalesData': weeklySalesData,
+      'estProfit': estProfit,
     };
   }
 
@@ -144,7 +147,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   final customerDues = (data['customerDues'] as num?)?.toDouble() ?? 0.0;
                   final supplierDues = (data['supplierDues'] as num?)?.toDouble() ?? 0.0;
                   final purchasesCost = (data['totalPurchasesCost'] as num?)?.toDouble() ?? 0.0;
-                  final estProfit = sales - purchasesCost;
+                  final estProfit = (data['estProfit'] as num?)?.toDouble() ?? 0.0;
                   final weeklyData = (data['weeklySalesData'] as List<Map<String, dynamic>>?) ?? [];
 
                   // Find max sales for weekly chart scaling
@@ -234,7 +237,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           Expanded(
                             child: GestureDetector(
                               onTap: () => _showProductProfitBreakdownSheet(context),
-                              child: _miniMetricCard('Est.Net Profit', estProfit > 0 ? estProfit : 0.0, 'Est.Net Profit', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
+                              child: _miniMetricCard('Net Gross Profit', estProfit > 0 ? estProfit : 0.0, 'Net Gross Profit', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
                             ),
                           ),
                         ],
