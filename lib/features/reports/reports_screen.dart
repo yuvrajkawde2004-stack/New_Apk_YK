@@ -232,14 +232,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-<<<<<<< HEAD
                             child: GestureDetector(
                               onLongPress: () => _showAverageProfitModal(context),
-                              child: _miniMetricCard('Est. Net Profit', estProfit > 0 ? estProfit : 0.0, 'अंदाजित नफा (Hold 10s)', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
+                              child: _miniMetricCard('Est. Net Profit', estProfit > 0 ? estProfit : 0.0, 'Est. Net Profit (Hold for Avg)', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
                             ),
-=======
-                            child: _miniMetricCard('Est. Net Profit', estProfit > 0 ? estProfit : 0.0, 'अंदाजित नफा', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                           ),
                         ],
                       ),
@@ -319,7 +315,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-<<<<<<< HEAD
   void _showAverageProfitModal(BuildContext context) {
     showDialog(
       context: context,
@@ -339,21 +334,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const Icon(Icons.analytics_rounded, color: Color(0xFF10B981), size: 28),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('सरासरी नफा (Average Profit)', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
+                  child: Text('Average Profit Analysis', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
               ],
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('आजपर्यंतच्या सर्व विक्रीतून मिळालेला सरासरी नफा:', style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey.shade600)),
+                Text('Average profit calculated across all sales to date:', style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey.shade600)),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF86EFAC))),
                   child: Column(
                     children: [
-                      Text('सरासरी नफा / वस्तू (Avg Profit/Item)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
+                      Text('Avg Profit / Item', style: GoogleFonts.outfit(fontSize: 12, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Text('₹${fmt.format(avgItemProfit)}', style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w900, color: const Color(0xFF059669))),
                     ],
@@ -368,7 +363,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(14)),
                         child: Column(
                           children: [
-                            Text('एकूण नफा', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
+                            Text('Total Profit', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
                             const SizedBox(height: 2),
                             Text('₹${fmt.format(totalProfit)}', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
                           ],
@@ -382,7 +377,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(14)),
                         child: Column(
                           children: [
-                            Text('नफा / बिल', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
+                            Text('Avg Profit / Bill', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
                             const SizedBox(height: 2),
                             Text('₹${fmt.format(avgBillProfit)}', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
                           ],
@@ -405,9 +400,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
   }
-
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   Widget _miniMetricCard(String title, double val, String sub, IconData icon, Color color, Color bg) {
     return Container(
       padding: const EdgeInsets.all(16),

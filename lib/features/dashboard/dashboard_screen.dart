@@ -128,7 +128,6 @@ class _HomeTab extends StatelessWidget {
                               ),
                             ],
                           ),
-<<<<<<< HEAD
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
@@ -143,54 +142,13 @@ class _HomeTab extends StatelessWidget {
                               ],
                             ),
                             child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimaryLight, size: 20),
-=======
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: onAddCustomer,
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [AppColors.royalBlue, Color(0xFF3B82F6)],
-                                    ),
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.royalBlue.withValues(alpha: 0.35),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(Icons.person_add_rounded, color: Colors.white, size: 20),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.06),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimaryLight, size: 20),
-                              ),
-                            ],
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
+                          ),
                           ),
                         ],
                       ).animate().fadeIn().slideY(begin: -0.1, end: 0),
 
                       const SizedBox(height: 20),
 
-<<<<<<< HEAD
                       // 👑 2. ULTRA-PREMIUM HERO REVENUE BANNER (Long press for Average Profit)
                       GestureDetector(
                         onLongPress: () => _showAverageProfitModal(context),
@@ -335,10 +293,7 @@ class _HomeTab extends StatelessWidget {
                             ),
                           ],
                         ),
-<<<<<<< HEAD
                       ),
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                       ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
 
                       const SizedBox(height: 26),
@@ -414,11 +369,7 @@ class _HomeTab extends StatelessWidget {
                           ),
                           _buildActionCard(
                             context: context,
-<<<<<<< HEAD
                             title: 'Customer',
-=======
-                            title: 'Customers & Dues',
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                             subtitle: '${provider.totalCustomers} Customer List',
                             icon: Icons.people_alt_rounded,
                             gradient: const LinearGradient(
@@ -533,7 +484,6 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
-<<<<<<< HEAD
   void _showAverageProfitModal(BuildContext context) {
     showDialog(
       context: context,
@@ -553,21 +503,21 @@ class _HomeTab extends StatelessWidget {
                 const Icon(Icons.analytics_rounded, color: Color(0xFF10B981), size: 28),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text('सरासरी नफा (Average Profit)', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
+                  child: Text('Average Profit Analysis', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
               ],
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('आजपर्यंतच्या विक्रीतून मिळालेला सरासरी नफा व आकडेवारी:', style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey.shade600)),
+                Text('Average profit calculated across all sales to date:', style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey.shade600)),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF86EFAC))),
                   child: Column(
                     children: [
-                      Text('सरासरी नफा / वस्तू (Avg Profit/Item)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
+                      Text('Avg Profit / Item', style: GoogleFonts.outfit(fontSize: 12, color: Colors.green.shade800, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Text('₹${fmt.format(avgItemProfit)}', style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w900, color: const Color(0xFF059669))),
                     ],
@@ -582,7 +532,7 @@ class _HomeTab extends StatelessWidget {
                         decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(14)),
                         child: Column(
                           children: [
-                            Text('एकूण नफा', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
+                            Text('Total Profit', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
                             const SizedBox(height: 2),
                             Text('₹${fmt.format(totalProfit)}', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
                           ],
@@ -596,7 +546,7 @@ class _HomeTab extends StatelessWidget {
                         decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(14)),
                         child: Column(
                           children: [
-                            Text('नफा / बिल', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
+                            Text('Avg Profit / Bill', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
                             const SizedBox(height: 2),
                             Text('₹${fmt.format(avgBillProfit)}', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
                           ],
@@ -619,9 +569,6 @@ class _HomeTab extends StatelessWidget {
       ),
     );
   }
-
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   Widget _heroStatItem({
     required IconData icon,
     required String label,
@@ -784,6 +731,10 @@ class _HomeTab extends StatelessWidget {
           formattedDate = DateFormat('d MMM, hh:mm a').format(dt);
         } catch (_) {}
 
+        final dueAmount = (d['due_amount'] as num?)?.toDouble() ?? 0.0;
+        final isPending = dueAmount > 0;
+        final statusColor = isPending ? const Color(0xFFEF4444) : const Color(0xFF10B981);
+
         return GestureDetector(
           onTap: () => _showBillDetailsModal(context, d),
           child: Container(
@@ -805,10 +756,8 @@ class _HomeTab extends StatelessWidget {
                 Container(
                   width: 46,
                   height: 46,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.royalBlue, Color(0xFF3B82F6)],
-                    ),
+                  decoration: BoxDecoration(
+                    color: statusColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -845,14 +794,14 @@ class _HomeTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '₹ $amount',
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF10B981),
+                      color: statusColor,
                       fontSize: 15,
                     ),
                   ),

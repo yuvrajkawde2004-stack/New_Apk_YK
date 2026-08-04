@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import 'package:flutter/services.dart';
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -901,7 +898,6 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
   final _qtyCtrl = TextEditingController(text: '1');
   final _paidCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-<<<<<<< HEAD
   String? _selectedSupplierName;
   bool _saving = false;
 
@@ -911,16 +907,11 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
     if (widget.suppliers.isNotEmpty) {
       _selectedSupplierName = widget.suppliers.first['name'];
       _supCtrl.text = _selectedSupplierName!;
-      _phoneCtrl.text = widget.suppliers.first['phone'] ?? '';
+      _phoneCtrl.text = (widget.suppliers.first['phone'] ?? '').toString().replaceAll('+91 ', '').replaceAll('+91', '');
     }
   }
 
   @override
-=======
-  bool _saving = false;
-
-  @override
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
@@ -935,12 +926,11 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
             Text('Record New Stock Purchase', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
 
-<<<<<<< HEAD
             // Step 1: Select or Add Supplier FIRST
             if (widget.suppliers.isNotEmpty) ...[
               DropdownButtonFormField<String>(
                 value: _selectedSupplierName,
-                decoration: const InputDecoration(labelText: '1. Select Supplier (सप्लायर निवडा)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: '1. Select Supplier', border: OutlineInputBorder()),
                 items: widget.suppliers.map((s) {
                   final name = s['name'].toString();
                   return DropdownMenuItem(value: name, child: Text(name));
@@ -985,13 +975,6 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
 
             // Step 2: Product & Rate
             TextField(controller: _prodCtrl, decoration: const InputDecoration(labelText: '2. Product Name (e.g. Cotton Shirt)', border: OutlineInputBorder())),
-=======
-            TextField(controller: _prodCtrl, decoration: const InputDecoration(labelText: 'Product Name (e.g. Cotton Shirt)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _supCtrl, decoration: const InputDecoration(labelText: 'Supplier Name (e.g. Surat Textiles)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Supplier Mobile Number', border: OutlineInputBorder())),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
             const SizedBox(height: 10),
 
             Row(
@@ -1030,7 +1013,6 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
     final rate = double.tryParse(_rateCtrl.text) ?? 0.0;
     final qty = int.tryParse(_qtyCtrl.text) ?? 0;
     final paid = double.tryParse(_paidCtrl.text) ?? 0.0;
-<<<<<<< HEAD
     final rawPhone = _phoneCtrl.text.trim();
 
     if (prod.isEmpty || sup.isEmpty || rate <= 0 || qty <= 0) {
@@ -1039,20 +1021,11 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
     }
 
     if (rawPhone.isNotEmpty && rawPhone.length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('सप्लायर मोबाईल नंबर १० अंकांचा असावा (+91 नंतर १० अंक)')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Supplier mobile number must be 10 digits (+91 followed by 10 digits)')));
       return;
     }
 
     final phoneVal = rawPhone.isEmpty ? '' : (rawPhone.startsWith('+91') ? rawPhone : '+91 $rawPhone');
-
-=======
-
-    if (prod.isEmpty || sup.isEmpty || rate <= 0 || qty <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill Product Name, Supplier, Price and Quantity.')));
-      return;
-    }
-
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
     setState(() => _saving = true);
     try {
       await DatabaseHelper.instance.recordPurchase(
@@ -1061,11 +1034,7 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
         purchaseRate: rate,
         quantity: qty,
         paidAmount: paid,
-<<<<<<< HEAD
         supplierPhone: phoneVal,
-=======
-        supplierPhone: _phoneCtrl.text.trim(),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
         notes: _noteCtrl.text.trim(),
       );
 
@@ -1111,11 +1080,7 @@ class _AddSupplierSheetState extends State<_AddSupplierSheet> {
     super.initState();
     if (widget.initialSupplier != null) {
       _nameCtrl.text = widget.initialSupplier!['name'] ?? '';
-<<<<<<< HEAD
       _phoneCtrl.text = (widget.initialSupplier!['phone'] ?? '').toString().replaceAll('+91 ', '').replaceAll('+91', '');
-=======
-      _phoneCtrl.text = widget.initialSupplier!['phone'] ?? '';
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
       _addressCtrl.text = widget.initialSupplier!['address'] ?? '';
     }
   }
@@ -1136,7 +1101,6 @@ class _AddSupplierSheetState extends State<_AddSupplierSheet> {
           const SizedBox(height: 16),
           TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Supplier / Business Name', border: OutlineInputBorder())),
           const SizedBox(height: 10),
-<<<<<<< HEAD
           TextField(
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
@@ -1153,9 +1117,6 @@ class _AddSupplierSheetState extends State<_AddSupplierSheet> {
               border: OutlineInputBorder(),
             ),
           ),
-=======
-          TextField(controller: _phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile Number', border: OutlineInputBorder())),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
           const SizedBox(height: 10),
           TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'City / Address', border: OutlineInputBorder())),
           const SizedBox(height: 20),
@@ -1165,11 +1126,9 @@ class _AddSupplierSheetState extends State<_AddSupplierSheet> {
             child: ElevatedButton(
               onPressed: _saving ? null : () async {
                 if (_nameCtrl.text.trim().isEmpty) return;
-<<<<<<< HEAD
-                
                 final rawPhone = _phoneCtrl.text.trim();
                 if (rawPhone.isNotEmpty && rawPhone.length != 10) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('सप्लायर मोबाईल नंबर १० अंकांचा असावा (+91 नंतर १० अंक)')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Supplier mobile number must be 10 digits (+91 followed by 10 digits)')));
                   return;
                 }
 
@@ -1179,13 +1138,6 @@ class _AddSupplierSheetState extends State<_AddSupplierSheet> {
                 final Map<String, dynamic> supplierData = {
                   'name': _nameCtrl.text.trim(),
                   'phone': phoneVal,
-=======
-                setState(() => _saving = true);
-                
-                final Map<String, dynamic> supplierData = {
-                  'name': _nameCtrl.text.trim(),
-                  'phone': _phoneCtrl.text.trim(),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                   'address': _addressCtrl.text.trim(),
                 };
 

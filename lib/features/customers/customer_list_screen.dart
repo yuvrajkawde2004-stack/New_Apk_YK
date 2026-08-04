@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import 'package:flutter/services.dart';
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
@@ -69,11 +66,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-<<<<<<< HEAD
         title: const Text('Customer'),
-=======
-        title: Text(loc.translate('customers')),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
         automaticallyImplyLeading: !widget.isEmbedded,
         leading: widget.isEmbedded
             ? null
@@ -500,22 +493,17 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
       );
       return;
     }
-<<<<<<< HEAD
-
     final rawPhone = _phoneCtrl.text.trim();
     if (rawPhone.isNotEmpty && rawPhone.length != 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('मोबाईल नंबर १० अंकांचा असावा (+91 नंतर १० अंक)')),
+        const SnackBar(content: Text('Mobile number must be 10 digits (+91 followed by 10 digits)')),
       );
       return;
     }
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
     
     setState(() => _isSaving = true);
     
     try {
-<<<<<<< HEAD
       final phoneVal = rawPhone.isEmpty 
           ? 'N/A_${DateTime.now().millisecondsSinceEpoch}' 
           : (rawPhone.startsWith('+91') ? rawPhone : '+91 $rawPhone');
@@ -523,13 +511,6 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
       await DatabaseHelper.instance.addCustomer({
         'name': _nameCtrl.text.trim(),
         'phone': phoneVal,
-=======
-      final phoneVal = _phoneCtrl.text.trim();
-      
-      await DatabaseHelper.instance.addCustomer({
-        'name': _nameCtrl.text.trim(),
-        'phone': phoneVal.isEmpty ? 'N/A_${DateTime.now().millisecondsSinceEpoch}' : phoneVal,
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
         'address': _notesCtrl.text.trim(), 
         'outstanding_balance': 0.0,
         'total_spent': 0.0,
@@ -546,11 +527,7 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-<<<<<<< HEAD
           SnackBar(content: Text('Failed to add customer: $e'), backgroundColor: Colors.red),
-=======
-          SnackBar(content: Text('Failed to add customer. Maybe phone number already exists?'), backgroundColor: Colors.red),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
         );
       }
     }
@@ -573,11 +550,7 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
           const SizedBox(height: 20),
           _inputField('Full Name', Icons.person_outline_rounded, _nameCtrl),
           const SizedBox(height: 14),
-<<<<<<< HEAD
           _inputField('Phone Number (10 digits)', Icons.phone_outlined, _phoneCtrl, TextInputType.phone, isPhone: true),
-=======
-          _inputField('Phone Number', Icons.phone_outlined, _phoneCtrl, TextInputType.phone),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
           const SizedBox(height: 14),
           _inputField('Notes (optional)', Icons.note_outlined, _notesCtrl),
           const SizedBox(height: 24),
@@ -598,7 +571,6 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
     );
   }
 
-<<<<<<< HEAD
   Widget _inputField(String label, IconData icon, TextEditingController controller, [TextInputType? type, bool isPhone = false]) {
     return TextField(
       controller: controller,
@@ -614,15 +586,6 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
         prefixText: isPhone ? '+91 ' : null,
         prefixStyle: isPhone ? const TextStyle(fontWeight: FontWeight.bold, color: AppColors.royalBlue) : null,
         counterText: '',
-=======
-  Widget _inputField(String label, IconData icon, TextEditingController controller, [TextInputType? type]) {
-    return TextField(
-      controller: controller,
-      keyboardType: type,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.royalBlue),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
         filled: true,
         fillColor: AppColors.backgroundLight,
         border: OutlineInputBorder(

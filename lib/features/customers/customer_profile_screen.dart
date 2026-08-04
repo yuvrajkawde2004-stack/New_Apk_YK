@@ -593,7 +593,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                       : _customerBills.isEmpty
                           ? const Text('No bills found for this customer yet.')
                           : Column(
-<<<<<<< HEAD
                               children: _customerBills.map((b) {
                                 final dueAmt = (b['due_amount'] as num?)?.toDouble() ?? 0.0;
                                 final isPaid = dueAmt <= 0;
@@ -618,23 +617,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                                   ),
                                 );
                               }).toList(),
-=======
-                              children: _customerBills.map((b) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _buildMockInvoiceCard(
-                                  b['bill_number'] ?? '', 
-                                  '₹ ${b['grand_total']}', 
-                                  b['bill_date'] ?? '', 
-                                  true, // Assuming paid for now
-                                  () {
-                                    _openWhatsAppChat(b);
-                                  },
-                                  onLongPress: () {
-                                    _showBillOptionsBottomSheet(b);
-                                  },
-                                ),
-                              )).toList(),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                             ),
                 ],
               ),
@@ -645,7 +627,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
-<<<<<<< HEAD
   Widget _buildMockInvoiceCard(String id, String amount, String date, bool paid, double dueAmount, VoidCallback onShare, {VoidCallback? onLongPress}) {
     final statusColor = paid ? const Color(0xFF10B981) : const Color(0xFFEF4444);
     return GestureDetector(

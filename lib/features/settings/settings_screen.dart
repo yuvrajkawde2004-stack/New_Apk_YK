@@ -8,10 +8,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/providers/locale_provider.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import 'shop_profile_modal.dart';
-<<<<<<< HEAD
 import '../../core/database/database_helper.dart';
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -164,21 +161,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _settingTile(
                   icon: Icons.cloud_done_rounded,
                   color: const Color(0xFF059669),
-<<<<<<< HEAD
                   title: 'Cloud Sync & Database',
                   subtitle: 'Status: ONLINE & SYNCED ✅',
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Cloud Database is active and syncing in real-time!'),
-=======
-                  title: 'Cloudflare Cloud Database',
-                  subtitle: 'Status: ONLINE & SYNCED ✅',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Cloudflare Cloud Database is active and syncing in real-time!'),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                         backgroundColor: AppColors.emeraldGreen,
                       ),
                     );
@@ -186,17 +174,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _divider(),
                 _settingTile(
-<<<<<<< HEAD
                   icon: Icons.restore_from_trash_rounded,
                   color: const Color(0xFFEA580C),
-                  title: 'Re-add Deleted Suppliers (री-ॲड सप्लायर)',
+                  title: 'Re-add Deleted Suppliers',
                   subtitle: 'Restore soft-deleted suppliers list',
                   onTap: () => _showDeletedSuppliersDialog(context),
                 ),
                 _divider(),
                 _settingTile(
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                   icon: Icons.security_rounded,
                   color: AppColors.royalBlue,
                   title: 'App Security & PIN Lock',
@@ -348,7 +333,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-<<<<<<< HEAD
   void _showDeletedSuppliersDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -373,7 +357,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
                   ),
                   const SizedBox(height: 16),
-                  Text('Deleted Suppliers (री-ॲड सप्लायर)', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Deleted Suppliers', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Text('Tap on "Re-Add / Restore" to bring supplier back to active list:', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13)),
                   const SizedBox(height: 16),
@@ -430,7 +414,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             icon: const Icon(Icons.restore_rounded, size: 16, color: Colors.white),
-                            label: Text('Re-add (री-ॲड)', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            label: Text('Re-add', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                         ],
                       ),
@@ -443,9 +427,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     );
   }
-
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   Widget _sectionTitle(String text) {
     return Text(
       text,

@@ -86,7 +86,6 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
-<<<<<<< HEAD
     final googleAccounts = [
       'user.retailflow@gmail.com',
       'shopowner.pos@gmail.com',
@@ -181,13 +180,6 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
           ),
         );
       },
-=======
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Google Sign In is temporarily unavailable. Please use OTP Login.'),
-        backgroundColor: Colors.redAccent,
-      ),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
     );
   }
 
