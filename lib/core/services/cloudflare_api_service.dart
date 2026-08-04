@@ -230,4 +230,18 @@ class CloudflareApiService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  /// 8. Reset/Clear Test Data on Cloudflare D1
+  static Future<bool> clearCloudflareDatabase() async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/reset-database'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Cloudflare reset-database error: $e');
+      return false;
+    }
+  }
 }

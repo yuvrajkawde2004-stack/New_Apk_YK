@@ -28,7 +28,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -143,6 +143,16 @@ class DatabaseHelper {
       } catch (e) {
         // Ignore if exists
       }
+    }
+
+    if (oldVersion < 11) {
+      try {
+        await db.delete('products');
+        await db.delete('purchases');
+        await db.delete('bills');
+        await db.delete('bill_items');
+        await db.delete('sync_logs');
+      } catch (_) {}
     }
   }
 
@@ -1374,5 +1384,30 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getSupplierPayments(String supplierName) async {
     final db = await database;
     return await db.query('supplier_payments', where: 'supplier_name = ?', whereArgs: [supplierName], orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getProductProfitBreakdown() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT 
+        p.product_name,
+        COALESCE(SUM(bi.quantity), 0) as total_qty_sold,
+        COALESCE(SUM((bi.selling_price - p.purchase_rate) * bi.quantity), 0.0) as total_product_profit
+      FROM products p
+      LEFT JOIN bill_items bi ON (p.id = bi.product_id OR LOWER(p.product_name) = LOWER(bi.product_name))
+      GROUP BY p.id, p.product_name
+      ORDER BY total_product_profit DESC, p.product_name ASC
+    ''');
+  }
+
+  Future<void> clearAllProductsAndDatabaseData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('products');
+      await txn.delete('purchases');
+      await txn.delete('bills');
+      await txn.delete('bill_items');
+      await txn.delete('sync_logs');
+    });
   }
 }

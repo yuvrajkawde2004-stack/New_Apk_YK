@@ -39,23 +39,27 @@ class _BillItem {
   int qty;
   double price;
   final TextEditingController priceCtrl;
+  final FocusNode priceFocusNode;
 
   _BillItem({
     this.product,
     required this.name,
     this.qty = 1,
     this.price = 0,
-  }) : priceCtrl = TextEditingController(text: price > 0 ? price.toStringAsFixed(0) : '');
+  })  : priceCtrl = TextEditingController(text: price > 0 ? price.toStringAsFixed(0) : ''),
+        priceFocusNode = FocusNode();
 
   double get total => price * qty;
   
   void dispose() {
     priceCtrl.dispose();
+    priceFocusNode.dispose();
   }
 }
 
 class _BillingScreenState extends State<BillingScreen> {
   final List<_BillItem> _items = [];
+  final ScrollController _itemsScrollController = ScrollController();
   late Customer? _selectedCustomer;
   String _paymentMethod = 'Cash';
   bool _isProcessing = false;
@@ -84,7 +88,7 @@ class _BillingScreenState extends State<BillingScreen> {
       id: bill['customer_id'] ?? 1,
       name: bill['customer_name'] ?? 'Walk-in Customer',
       phone: bill['customer_mobile'] ?? 'N/A',
-      outstandingBalance: 0, // Not perfectly accurate but we mostly need ID and Name here
+      outstandingBalance: 0,
     );
     _paymentMethod = bill['payment_method'] ?? 'Cash';
     
@@ -97,13 +101,21 @@ class _BillingScreenState extends State<BillingScreen> {
     final itemsData = await DatabaseHelper.instance.getBillItems(billId);
     
     setState(() {
+      _items.clear();
       for (final item in itemsData) {
-        _items.add(_BillItem(
-          product: null, // We don't link full Product objects back unless we search for it, but for editing existing items we just need name and price
+        final itemPrice = (item['selling_price'] as num?)?.toDouble() ?? (item['price'] as num?)?.toDouble() ?? 0.0;
+        final newItem = _BillItem(
+          product: null,
           name: item['product_name'] ?? '',
           qty: item['quantity'] ?? 1,
-          price: (item['price'] as num?)?.toDouble() ?? 0.0,
-        ));
+          price: itemPrice,
+        );
+        newItem.priceFocusNode.addListener(() {
+          if (newItem.priceFocusNode.hasFocus) {
+            _scrollToItem(newItem);
+          }
+        });
+        _items.add(newItem);
       }
     });
   }
@@ -154,20 +166,46 @@ class _BillingScreenState extends State<BillingScreen> {
 
   double get _dueAmount => (_grandTotal - _paidAmount).clamp(0.0, double.infinity);
 
+  void _scrollToItem(_BillItem item) {
+    final idx = _items.indexOf(item);
+    if (idx != -1 && _itemsScrollController.hasClients) {
+      final targetOffset = (idx * 110.0).clamp(0.0, _itemsScrollController.position.maxScrollExtent);
+      _itemsScrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
   void _addItem(Product? p, {String? customName}) {
+    _BillItem? addedItem;
     setState(() {
       if (p != null) {
         final existing = _items.where((i) => i.product?.id == p.id).toList();
         if (existing.isNotEmpty) {
           existing.first.qty++;
+          addedItem = existing.first;
         } else {
-          _items.insert(0, _BillItem(product: p, name: p.name, price: p.sellingPrice));
+          addedItem = _BillItem(product: p, name: p.name, price: p.sellingPrice);
+          _items.insert(0, addedItem!);
         }
       } else if (customName != null && customName.trim().isNotEmpty) {
         final cleanName = customName.trim();
-        _items.insert(0, _BillItem(product: null, name: cleanName, price: 0));
+        addedItem = _BillItem(product: null, name: cleanName, price: 0);
+        _items.insert(0, addedItem!);
       }
     });
+
+    if (addedItem != null) {
+      final item = addedItem!;
+      item.priceFocusNode.addListener(() {
+        if (item.priceFocusNode.hasFocus) {
+          _scrollToItem(item);
+        }
+      });
+    }
+
     _searchCtrl.clear();
     FocusScope.of(context).unfocus();
   }
@@ -202,7 +240,7 @@ class _BillingScreenState extends State<BillingScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Select Customer / ग्राहक निवडा', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('Select Customer', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
                 IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
               ],
             ),
@@ -211,7 +249,7 @@ class _BillingScreenState extends State<BillingScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               tileColor: AppColors.backgroundLight,
               leading: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person_off_rounded, color: Colors.grey)),
-              title: Text('Walk-in Customer (साधा ग्राहक)', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              title: Text('Walk-in Customer', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
               onTap: () {
                 setState(() => _selectedCustomer = null);
                 Navigator.pop(ctx);
@@ -280,7 +318,7 @@ class _BillingScreenState extends State<BillingScreen> {
                   children: [
                     const Icon(Icons.inventory_2_rounded, color: AppColors.royalBlue),
                     const SizedBox(width: 10),
-                    Text('Select Product / प्रॉडक्ट निवडा', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text('Select Product', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
@@ -341,7 +379,7 @@ class _BillingScreenState extends State<BillingScreen> {
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('कृपया बिलात प्रॉडक्ट सेलेक्ट करा किंवा टाईप करा (Select or Type Product)', style: GoogleFonts.outfit()),
+          content: Text('Please select or type a product for the bill', style: GoogleFonts.outfit()),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -353,7 +391,7 @@ class _BillingScreenState extends State<BillingScreen> {
     if (_items.any((i) => i.price <= 0)) {
        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('कृपया प्रॉडक्टची किंमत (Price) टाका.', style: GoogleFonts.outfit()),
+          content: Text('Please enter item price.', style: GoogleFonts.outfit()),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -367,7 +405,10 @@ class _BillingScreenState extends State<BillingScreen> {
       final prefs = await SharedPreferences.getInstance();
       final isEdit = widget.billToEdit != null;
       final billNo = isEdit ? widget.billToEdit!['bill_number'] : await DatabaseHelper.instance.generateBillNumber();
-      
+      final nowStr = DateTime.now().toIso8601String();
+      final prevPaid = isEdit ? ((widget.billToEdit!['paid_amount'] as num?)?.toDouble() ?? 0.0) : 0.0;
+      final isPaymentSettled = isEdit && (_paidAmount > prevPaid || _dueAmount <= 0);
+
       final billData = {
         'bill_number': billNo,
         'customer_id': _selectedCustomer?.id,
@@ -384,8 +425,8 @@ class _BillingScreenState extends State<BillingScreen> {
         'paid_amount': _paidAmount,
         'due_amount': _dueAmount,
         'payment_method': _paymentMethod,
-        'bill_date': isEdit ? widget.billToEdit!['bill_date'] : DateTime.now().toIso8601String(),
-        'created_at': isEdit ? widget.billToEdit!['created_at'] : DateTime.now().toIso8601String(),
+        'bill_date': (isEdit && !isPaymentSettled) ? (widget.billToEdit!['bill_date'] ?? nowStr) : nowStr,
+        'created_at': isEdit ? (widget.billToEdit!['created_at'] ?? nowStr) : nowStr,
       };
 
       final itemsData = _items.map((i) => {
@@ -889,6 +930,7 @@ class _BillingScreenState extends State<BillingScreen> {
                       ).animate().fadeIn().scale(),
                     )
                   : ListView.builder(
+                      controller: _itemsScrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       itemCount: _items.length,
                       itemBuilder: (_, i) {
@@ -949,6 +991,7 @@ class _BillingScreenState extends State<BillingScreen> {
                                             Expanded(
                                               child: TextField(
                                                 controller: item.priceCtrl,
+                                                focusNode: item.priceFocusNode,
                                                 keyboardType: TextInputType.number,
                                                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
                                                 decoration: const InputDecoration(
@@ -956,6 +999,7 @@ class _BillingScreenState extends State<BillingScreen> {
                                                   border: InputBorder.none,
                                                   isDense: true,
                                                 ),
+                                                onTap: () => _scrollToItem(item),
                                                 onChanged: (val) {
                                                   setState(() {
                                                     item.price = double.tryParse(val) ?? 0;

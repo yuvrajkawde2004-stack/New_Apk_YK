@@ -109,7 +109,7 @@ class _InventoryScreenState extends State<InventoryScreen>
               backgroundColor: AppColors.royalBlue,
               icon: const Icon(Icons.person_add_rounded, color: Colors.white),
               label: Text(
-                'Add Supplier (सप्लायर जोडा)',
+                'Add Supplier',
                 style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             )
@@ -172,7 +172,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                               child: const Icon(Icons.trending_up_rounded, color: Color(0xFF10B981), size: 16),
                             ),
                             const SizedBox(width: 8),
-                            Text('अंदाजित नफा (Est. Net Profit)', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text('Est. Net Profit', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -427,7 +427,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Supplier Dues (उधारी)', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
+                    Text('Total Supplier Dues', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text('₹${fmt.format(_totalSupplierDues)}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
                   ],
@@ -558,6 +558,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _SupplierLedgerSheet(
         supplier: supplier,
@@ -721,6 +722,7 @@ class _SupplierLedgerSheet extends StatefulWidget {
 
 class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleTickerProviderStateMixin {
   late TabController _innerTabCtrl;
+  late Map<String, dynamic> _currentSupplier;
   List<Map<String, dynamic>> _purchases = [];
   List<Map<String, dynamic>> _payments = [];
   bool _loading = true;
@@ -728,171 +730,315 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
   @override
   void initState() {
     super.initState();
+    _currentSupplier = Map<String, dynamic>.from(widget.supplier);
     _innerTabCtrl = TabController(length: 2, vsync: this);
     _loadSupplierData();
   }
 
   Future<void> _loadSupplierData() async {
-    final name = widget.supplier['name'] ?? '';
+    final name = _currentSupplier['name'] ?? '';
     final pur = await DatabaseHelper.instance.getPurchasesBySupplier(name);
     final pay = await DatabaseHelper.instance.getSupplierPayments(name);
+    final allSups = await DatabaseHelper.instance.getSuppliers();
+    final updatedSup = allSups.firstWhere(
+      (s) => (s['name'] ?? '').toString().toLowerCase() == name.toString().toLowerCase(),
+      orElse: () => _currentSupplier,
+    );
+
     if (mounted) {
       setState(() {
+        _currentSupplier = Map<String, dynamic>.from(updatedSup);
         _purchases = pur;
         _payments = pay;
         _loading = false;
       });
     }
+    widget.onUpdate();
   }
 
   @override
   Widget build(BuildContext context) {
     final fmt = NumberFormat('#,##,##0.00');
-    final due = (widget.supplier['outstanding_due'] as num?)?.toDouble() ?? 0.0;
-    final totalPurchased = (widget.supplier['total_purchased'] as num?)?.toDouble() ?? 0.0;
-    final totalPaid = (widget.supplier['total_paid'] as num?)?.toDouble() ?? 0.0;
+    final name = _currentSupplier['name'] ?? '';
+    final phone = _currentSupplier['phone'] ?? 'N/A';
+    final due = (_currentSupplier['outstanding_due'] as num?)?.toDouble() ?? 0.0;
+    final totalPurchased = (_currentSupplier['total_purchased'] as num?)?.toDouble() ?? 0.0;
+    final totalPaid = (_currentSupplier['total_paid'] as num?)?.toDouble() ?? 0.0;
 
     return Container(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+      height: MediaQuery.of(context).size.height,
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        color: Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 18),
+            onPressed: () => Navigator.pop(context),
           ),
-          const SizedBox(height: 16),
-
-          // Supplier Header
-          Row(
+          title: Text(
+            'Supplier Profile & Ledger',
+            style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.royalBlue),
+              onPressed: _loadSupplierData,
+              tooltip: 'Refresh Ledger',
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Column(
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.royalBlue.withValues(alpha: 0.15),
-                child: Text(
-                  widget.supplier['name'] != null && widget.supplier['name'].toString().isNotEmpty ? widget.supplier['name'][0].toUpperCase() : 'S',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.royalBlue),
+              // 👑 1. ULTRA-PREMIUM HERO BANNER
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF312E81)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFF1E1B4B).withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6)),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.supplier['name'] ?? '', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text('Ph: ${widget.supplier['phone'] ?? 'N/A'}', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.white.withValues(alpha: 0.15),
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone_rounded, color: Colors.white60, size: 14),
+                                  const SizedBox(width: 4),
+                                  Text(phone, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white70)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: due > 0 ? Colors.red.withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: due > 0 ? Colors.redAccent.withValues(alpha: 0.5) : Colors.greenAccent.withValues(alpha: 0.5)),
+                          ),
+                          child: Text(
+                            due > 0 ? 'DUE' : 'CLEARED',
+                            style: GoogleFonts.outfit(color: due > 0 ? Colors.redAccent : Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Container(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+                    const SizedBox(height: 14),
+                    // 3 Financial Metric Cards
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _heroMetricItem('Total Bought', '₹${fmt.format(totalPurchased)}', Colors.white70),
+                        _heroMetricItem('Total Paid', '₹${fmt.format(totalPaid)}', const Color(0xFF34D399)),
+                        _heroMetricItem('Remaining Due', '₹${fmt.format(due)}', due > 0 ? const Color(0xFFF87171) : const Color(0xFF34D399)),
+                      ],
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn().slideY(begin: -0.05, end: 0),
+
+              // ⚡ 2. QUICK ACTION BUTTONS
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showAddProductForSupplierDialog,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.royalBlue,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        icon: const Icon(Icons.add_box_rounded, color: Colors.white, size: 18),
+                        label: Text('+ Add Product', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showRecordSupplierPaymentDialog,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        icon: const Icon(Icons.payments_rounded, color: Colors.white, size: 18),
+                        label: Text('Pay Supplier', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-            ],
-          ),
 
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-          // Due Card
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: due > 0 ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: due > 0 ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Outstanding Balance (उधारी)', style: GoogleFonts.outfit(fontSize: 11, color: due > 0 ? Colors.red.shade800 : Colors.green.shade800)),
-                    Text('₹${fmt.format(due)}', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w900, color: due > 0 ? Colors.red.shade900 : Colors.green.shade900)),
-                    Text('Total Bought: ₹${fmt.format(totalPurchased)} • Total Paid: ₹${fmt.format(totalPaid)}', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
+              // 📑 3. TAB BAR (Purchases & Payments)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                child: TabBar(
+                  controller: _innerTabCtrl,
+                  labelColor: AppColors.royalBlue,
+                  unselectedLabelColor: Colors.grey.shade600,
+                  indicatorColor: AppColors.royalBlue,
+                  indicatorWeight: 3,
+                  labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                  tabs: const [
+                    Tab(text: 'Purchases Ledger'),
+                    Tab(text: 'Payment Logs'),
                   ],
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => _showRecordSupplierPaymentDialog(),
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                      icon: const Icon(Icons.payment_rounded, color: Colors.white, size: 14),
-                      label: Text('Pay Supplier', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                    ),
-                    const SizedBox(height: 6),
-                    ElevatedButton.icon(
-                      onPressed: () => _showAddProductForSupplierDialog(),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                      icon: const Icon(Icons.add_box_rounded, color: Colors.white, size: 14),
-                      label: Text('+ Add Product', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          const SizedBox(height: 14),
+              const SizedBox(height: 10),
 
-          TabBar(
-            controller: _innerTabCtrl,
-            labelColor: AppColors.royalBlue,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: AppColors.royalBlue,
-            tabs: const [
-              Tab(text: 'Purchases History'),
-              Tab(text: 'Payment Logs'),
+              // 📜 4. TAB VIEWS WITH REAL-TIME LIST
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
+                    : TabBarView(
+                        controller: _innerTabCtrl,
+                        children: [
+                          // Tab 1: Purchases History
+                          _purchases.isEmpty
+                              ? Center(
+                                  child: Text('No purchases recorded for this supplier', style: GoogleFonts.outfit(color: Colors.grey)),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _purchases.length,
+                                  itemBuilder: (_, i) {
+                                    final p = _purchases[i];
+                                    final amt = (p['total_amount'] as num?)?.toDouble() ?? 0.0;
+                                    final dateStr = p['purchase_date']?.toString().substring(0, 10) ?? '';
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                                            child: const Icon(Icons.shopping_bag_outlined, color: AppColors.royalBlue, size: 20),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(p['product_name'] ?? 'Stock Item', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                                                Text('Qty: ${p['quantity']} @ ₹${p['purchase_rate']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                                              ],
+                                            ),
+                                          ),
+                                          Text('₹${fmt.format(amt)}', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16, color: const Color(0xFF0F172A))),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                          // Tab 2: Payment Logs
+                          _payments.isEmpty
+                              ? Center(
+                                  child: Text('No payment logs recorded yet', style: GoogleFonts.outfit(color: Colors.grey)),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _payments.length,
+                                  itemBuilder: (_, i) {
+                                    final pm = _payments[i];
+                                    final amt = (pm['amount_paid'] as num?)?.toDouble() ?? 0.0;
+                                    final dateStr = pm['payment_date']?.toString().substring(0, 10) ?? '';
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                            child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text('Paid ₹${fmt.format(amt)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                                                Text('Mode: ${pm['payment_method']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                                              ],
+                                            ),
+                                          ),
+                                          Text('SUCCESS', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: const Color(0xFF10B981))),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ],
+                      ),
+              ),
             ],
           ),
-
-          const SizedBox(height: 10),
-
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
-                : TabBarView(
-                    controller: _innerTabCtrl,
-                    children: [
-                      // Tab 1: Purchases History
-                      _purchases.isEmpty
-                          ? Center(child: Text('No purchases recorded for this supplier', style: GoogleFonts.outfit(color: Colors.grey)))
-                          : ListView.builder(
-                              itemCount: _purchases.length,
-                              itemBuilder: (_, i) {
-                                final p = _purchases[i];
-                                return ListTile(
-                                  dense: true,
-                                  title: Text(p['product_name'] ?? 'Item', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('Qty: ${p['quantity']} @ ₹${p['purchase_rate']} • ${p['purchase_date']?.toString().substring(0, 10)}'),
-                                  trailing: Text('₹${fmt.format((p['total_amount'] as num?)?.toDouble() ?? 0.0)}', style: GoogleFonts.outfit(fontWeight: FontWeight.w900)),
-                                );
-                              },
-                            ),
-
-                      // Tab 2: Payment Logs
-                      _payments.isEmpty
-                          ? Center(child: Text('No payments recorded yet', style: GoogleFonts.outfit(color: Colors.grey)))
-                          : ListView.builder(
-                              itemCount: _payments.length,
-                              itemBuilder: (_, i) {
-                                final pm = _payments[i];
-                                return ListTile(
-                                  dense: true,
-                                  leading: const Icon(Icons.check_circle_rounded, color: Colors.green),
-                                  title: Text('Paid ₹${fmt.format((pm['amount_paid'] as num?)?.toDouble() ?? 0.0)} via ${pm['payment_method']}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('Date: ${pm['payment_date']?.toString().substring(0, 10)} ${pm['notes'] != null && pm['notes'].toString().isNotEmpty ? "• " + pm['notes'] : ""}'),
-                                );
-                              },
-                            ),
-                    ],
-                  ),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _heroMetricItem(String label, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.outfit(color: Colors.white60, fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(value, style: GoogleFonts.outfit(color: valueColor, fontWeight: FontWeight.w900, fontSize: 15)),
+      ],
     );
   }
 
@@ -901,11 +1047,17 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
     final noteCtrl = TextEditingController();
     String method = 'Cash';
 
+  void _showRecordSupplierPaymentDialog() {
+    final amtCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+    String method = 'Cash';
+    final supName = _currentSupplier['name'] ?? '';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Pay ${widget.supplier['name']}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text('Pay $supName', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -935,17 +1087,17 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
               final paid = double.tryParse(amtCtrl.text) ?? 0.0;
               if (paid > 0) {
                 await DatabaseHelper.instance.recordSupplierPayment(
-                  supplierName: widget.supplier['name'],
+                  supplierName: supName,
                   amountPaid: paid,
                   paymentMethod: method,
                   notes: noteCtrl.text.trim(),
                 );
                 if (mounted) {
                   Navigator.pop(context);
-                  _loadSupplierData();
+                  await _loadSupplierData();
                   widget.onUpdate();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Paid ₹$paid to ${widget.supplier['name']}'), backgroundColor: AppColors.emeraldGreen),
+                    SnackBar(content: Text('Paid ₹$paid to $supName'), backgroundColor: AppColors.emeraldGreen),
                   );
                 }
               }
@@ -964,12 +1116,14 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
     final qtyCtrl = TextEditingController(text: '1');
     final paidCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
+    final supName = _currentSupplier['name'] ?? '';
+    final supPhone = _currentSupplier['phone'] ?? '';
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Add Product for ${widget.supplier['name']}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text('Add Product for $supName', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1029,20 +1183,20 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
 
               await DatabaseHelper.instance.recordPurchase(
                 productName: prod,
-                supplierName: widget.supplier['name'],
+                supplierName: supName,
                 purchaseRate: rate,
                 quantity: qty,
                 paidAmount: paid,
-                supplierPhone: widget.supplier['phone'] ?? '',
+                supplierPhone: supPhone,
                 notes: noteCtrl.text.trim(),
               );
 
               if (mounted) {
                 Navigator.pop(ctx);
-                _loadSupplierData();
+                await _loadSupplierData();
                 widget.onUpdate();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Added "$prod" under ${widget.supplier['name']}!'), backgroundColor: AppColors.emeraldGreen),
+                  SnackBar(content: Text('Added "$prod" under $supName!'), backgroundColor: AppColors.emeraldGreen),
                 );
               }
             },

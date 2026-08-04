@@ -214,11 +214,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: _miniMetricCard('Customer Dues', customerDues, 'ग्राहक उधारी', Icons.people_outline_rounded, Colors.red.shade600, const Color(0xFFFEF2F2)),
+                            child: _miniMetricCard('Customer Dues', customerDues, 'Customer Dues', Icons.people_outline_rounded, Colors.red.shade600, const Color(0xFFFEF2F2)),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: _miniMetricCard('Supplier Dues', supplierDues, 'सप्लायर उधारी', Icons.local_shipping_outlined, Colors.orange.shade700, const Color(0xFFFFF7ED)),
+                            child: _miniMetricCard('Supplier Dues', supplierDues, 'Supplier Dues', Icons.local_shipping_outlined, Colors.orange.shade700, const Color(0xFFFFF7ED)),
                           ),
                         ],
                       ),
@@ -228,13 +228,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: _miniMetricCard('Stock Purchases', purchasesCost, 'एकूण खरेदी', Icons.shopping_bag_outlined, const Color(0xFF2563EB), const Color(0xFFEFF6FF)),
+                            child: _miniMetricCard('Stock Purchases', purchasesCost, 'Total Purchases', Icons.shopping_bag_outlined, const Color(0xFF2563EB), const Color(0xFFEFF6FF)),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onLongPress: () => _showAverageProfitModal(context),
-                              child: _miniMetricCard('Est. Net Profit', estProfit > 0 ? estProfit : 0.0, 'Est. Net Profit (Hold for Avg)', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
+                              onTap: () => _showProductProfitBreakdownSheet(context),
+                              child: _miniMetricCard('Est.Net Profit', estProfit > 0 ? estProfit : 0.0, 'Est.Net Profit', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
                             ),
                           ),
                         ],
@@ -400,6 +400,120 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
   }
+
+  void _showProductProfitBreakdownSheet(BuildContext context) {
+    final fmt = NumberFormat('#,##,##0.00');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.15), shape: BoxShape.circle),
+                  child: const Icon(Icons.analytics_rounded, color: Color(0xFF10B981), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Product Net Profit Ledger', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+              ],
+            ),
+            Text('Cumulative profit earned across all transactions per product:', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+
+            const SizedBox(height: 16),
+
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: DatabaseHelper.instance.getProductProfitBreakdown(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator(color: AppColors.royalBlue));
+                  }
+
+                  final list = snapshot.data ?? [];
+                  if (list.isEmpty) {
+                    return Center(
+                      child: Text('No product sales recorded yet', style: GoogleFonts.outfit(color: Colors.grey)),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: list.length,
+                    itemBuilder: (_, i) {
+                      final item = list[i];
+                      final name = item['product_name'] ?? 'Product';
+                      final qtySold = (item['total_qty_sold'] as num?)?.toInt() ?? 0;
+                      final profit = (item['total_product_profit'] as num?)?.toDouble() ?? 0.0;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                              child: Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.royalBlue),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                                  Text('$qtySold Units Sold', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('₹${fmt.format(profit)}', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16, color: profit >= 0 ? const Color(0xFF059669) : Colors.red)),
+                                Text('Profit', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _miniMetricCard(String title, double val, String sub, IconData icon, Color color, Color bg) {
     return Container(
       padding: const EdgeInsets.all(16),

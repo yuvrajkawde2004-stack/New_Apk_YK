@@ -113,7 +113,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Color Invoice (रंगीन बिल)', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+                      Text('Color Invoice', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
                       IconButton(
                         icon: const Icon(Icons.close_rounded, color: Colors.grey),
                         onPressed: () => Navigator.pop(context),
@@ -159,7 +159,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           
                           await Share.shareXFiles(
                             [XFile(imagePath.path)], 
-                            text: 'नमस्कार ${billData['customer_name']},\n\nतुमचे रंगीन बिल (Color Invoice) सोबत जोडले आहे.\n$statusMsg\n\nधन्यवाद!'
+                            text: 'Hello ${billData['customer_name']},\n\nPlease find your Color Invoice attached.\n$statusMsg\n\nThank you!'
                           );
                         } catch (e) {
                           debugPrint('Error sharing color invoice image: $e');
@@ -216,7 +216,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          'WhatsApp बिल निवडा',
+                          'Select Invoice for WhatsApp',
                           style: GoogleFonts.outfit(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -243,7 +243,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                       ),
                       icon: const Icon(Icons.check_circle_rounded, size: 18),
                       label: Text(
-                        'Done (पूर्ण)',
+                        'Done',
                         style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                     ),
@@ -251,7 +251,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'ग्राहक: ${widget.customer.name} (${widget.customer.phone ?? ""})',
+                  'Customer: ${widget.customer.name} (${widget.customer.phone ?? ""})',
                   style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 13),
                 ),
                 const SizedBox(height: 14),
@@ -365,7 +365,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     ),
                     icon: const Icon(Icons.chat_rounded, size: 20),
                     label: Text(
-                      'WhatsApp वर पाठवा (Send Bill)',
+                      'Send Bill on WhatsApp',
                       style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ),
@@ -713,7 +713,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 IconButton(
                   icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 20),
                   onPressed: onShare,
-                  tooltip: 'WhatsApp वर पाठवा',
+                  tooltip: 'Send on WhatsApp',
                 ),
               ],
             ),
@@ -753,7 +753,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               const SizedBox(height: 20),
               ListTile(
                 leading: const Icon(Icons.share_rounded, color: Color(0xFF25D366)),
-                title: const Text('View & Share Color Bill (रंगीन बिल पहा/पाठवा)', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text('View & Share Color Bill', style: TextStyle(fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showColorInvoicePreview(bill);
@@ -761,7 +761,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.edit_rounded, color: AppColors.royalBlue),
-                title: const Text('Edit Bill (बिल एडिट करा)', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text('Edit Bill', style: TextStyle(fontWeight: FontWeight.w600)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await Navigator.push(
@@ -773,7 +773,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
-                title: const Text('Delete Bill (बिल डिलीट करा)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.redAccent)),
+                title: const Text('Delete Bill', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.redAccent)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _confirmDeleteBill(bill);

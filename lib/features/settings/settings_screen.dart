@@ -155,9 +155,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 20),
 
               // 🔒 3. SECURITY & SYSTEM DATA
-              _sectionTitle('SECURITY & SUPPLIERS DATA'),
+              _sectionTitle('SECURITY & SYSTEM DATA'),
               const SizedBox(height: 10),
               _buildCard([
+                _settingTile(
+                  icon: Icons.cleaning_services_rounded,
+                  color: Colors.redAccent,
+                  title: 'Clear All Test Data & Reset DB',
+                  subtitle: 'Wipe test products & start fresh with real products',
+                  onTap: () => _showResetDatabaseDialog(context),
+                ),
+                _divider(),
                 _settingTile(
                   icon: Icons.restore_from_trash_rounded,
                   color: const Color(0xFFEA580C),
@@ -318,6 +326,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
             child: Text(_pinLock ? 'Disable Lock' : 'Enable Lock', style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetDatabaseDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Wipe All Test Data?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+        content: Text(
+          'This will clear all test sample products, purchase history, and bills from both Local Database & Cloudflare D1 so you can start adding your real stock products fresh.',
+          style: GoogleFonts.outfit(fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await DatabaseHelper.instance.clearAllProductsAndDatabaseData();
+              await CloudflareApiService.clearCloudflareDatabase();
+              if (mounted) {
+                Provider.of<DashboardProvider>(context, listen: false).refreshDashboard();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Database reset successfully! You can now add your real products.', style: GoogleFonts.outfit()),
+                    backgroundColor: AppColors.emeraldGreen,
+                  ),
+                );
+              }
+            },
+            child: const Text('Reset Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

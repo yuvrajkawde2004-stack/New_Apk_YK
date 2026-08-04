@@ -213,7 +213,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               const SizedBox(height: 20),
               ListTile(
                 leading: const Icon(Icons.edit_rounded, color: AppColors.royalBlue),
-                title: const Text('Edit Customer (माहिती बदला)', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text('Edit Customer', style: TextStyle(fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showEditCustomerDialog(customer);
@@ -221,7 +221,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
-                title: const Text('Delete Customer (कस्टमर डिलीट करा)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.redAccent)),
+                title: const Text('Delete Customer', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.redAccent)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _confirmDeleteCustomer(customer);

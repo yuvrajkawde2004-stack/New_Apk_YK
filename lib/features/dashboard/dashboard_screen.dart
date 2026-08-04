@@ -796,7 +796,7 @@ class _HomeTab extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Delete Invoice #${billData['bill_number']}?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         content: Text(
-          'हे बिल डिलीट करायचे आहे का? डिलीट केल्यावर या बिलाची रक्कम आजच्या विक्रीतून (Today\'s Sales) वजा होईल आणि माल पूर्ववत साठ्यात जमा होईल.',
+          'Are you sure you want to delete this invoice? Deleting will deduct the amount from Today\'s Sales and restore stock items.',
           style: GoogleFonts.outfit(fontSize: 13),
         ),
         actions: [
