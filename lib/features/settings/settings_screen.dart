@@ -154,25 +154,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 20),
 
-              // ☁️ 3. CLOUD BACKUP & DATABASE
-              _sectionTitle('CLOUD BACKUP & DATABASE'),
+              // 🔒 3. SECURITY & SYSTEM DATA
+              _sectionTitle('SECURITY & SUPPLIERS DATA'),
               const SizedBox(height: 10),
               _buildCard([
-                _settingTile(
-                  icon: Icons.cloud_done_rounded,
-                  color: const Color(0xFF059669),
-                  title: 'Cloud Sync & Database',
-                  subtitle: 'Status: ONLINE & SYNCED ✅',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Cloud Database is active and syncing in real-time!'),
-                        backgroundColor: AppColors.emeraldGreen,
-                      ),
-                    );
-                  },
-                ),
-                _divider(),
                 _settingTile(
                   icon: Icons.restore_from_trash_rounded,
                   color: const Color(0xFFEA580C),
@@ -222,7 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.info_outline_rounded,
                   color: Colors.grey.shade700,
                   title: 'About RetailFlow POS',
-                  subtitle: 'Version 2.5.0 Pro (Cloud Sync Enabled)',
+                  subtitle: 'Version 2.5.0 Pro',
                   onTap: () {},
                 ),
                 _divider(),
@@ -231,7 +216,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: Colors.red,
                   title: 'Sign Out Account',
                   subtitle: 'Safely logout from this phone',
-                  onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('is_logged_in', false);
+                    if (context.mounted) {
+                      Navigator.pushReplacementNamed(context, '/login');
+                    }
+                  },
                 ),
               ]),
 

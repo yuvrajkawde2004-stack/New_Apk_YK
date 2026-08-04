@@ -148,27 +148,25 @@ class _HomeTab extends StatelessWidget {
 
                       const SizedBox(height: 20),
 
-                      // 👑 2. ULTRA-PREMIUM HERO REVENUE BANNER (Long press for Average Profit)
-                      GestureDetector(
-                        onLongPress: () => _showAverageProfitModal(context),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(22),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF312E81)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF1E1B4B).withValues(alpha: 0.4),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
+                      // 👑 2. ULTRA-PREMIUM HERO REVENUE BANNER
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF312E81)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF1E1B4B).withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -271,7 +269,6 @@ class _HomeTab extends StatelessWidget {
                             ),
                           ],
                         ),
-                      ),
                       ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
 
                       const SizedBox(height: 26),

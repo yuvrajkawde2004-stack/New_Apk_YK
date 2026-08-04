@@ -28,7 +28,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -71,7 +71,7 @@ class _InventoryScreenState extends State<InventoryScreen>
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          'Inventory & Purchase Studio',
+          'Inventory & Suppliers Studio',
           style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18),
         ),
         iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
@@ -90,7 +90,6 @@ class _InventoryScreenState extends State<InventoryScreen>
           labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
           tabs: const [
             Tab(icon: Icon(Icons.inventory_2_rounded, size: 20), text: 'Stock Items'),
-            Tab(icon: Icon(Icons.shopping_bag_rounded, size: 20), text: 'Purchases'),
             Tab(icon: Icon(Icons.local_shipping_rounded, size: 20), text: 'Suppliers Ledger'),
           ],
         ),
@@ -101,21 +100,20 @@ class _InventoryScreenState extends State<InventoryScreen>
               controller: _tabController,
               children: [
                 _buildStockTab(),
-                _buildPurchasesTab(),
                 _buildSuppliersTab(),
               ],
             ),
-      floatingActionButton: _tabController.index == 0
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: _showAddPurchaseSheet,
+      floatingActionButton: _tabController.index == 1
+          ? FloatingActionButton.extended(
+              onPressed: _showAddSupplierSheet,
               backgroundColor: AppColors.royalBlue,
-              icon: const Icon(Icons.add_shopping_cart_rounded, color: Colors.white),
+              icon: const Icon(Icons.person_add_rounded, color: Colors.white),
               label: Text(
-                'New Purchase (खरेदी नोंद)',
+                'Add Supplier (सप्लायर जोडा)',
                 style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-            ),
+            )
+          : null,
     );
   }
 
@@ -131,25 +129,86 @@ class _InventoryScreenState extends State<InventoryScreen>
       return name.contains(q) || cat.contains(q);
     }).toList();
 
+    // Calculate Estimated Profit (अंदाजित नफा) and Average Margin %
+    final double totalCost = _totalStockValue;
+    final double totalEstimatedProfit = totalCost * 0.25; // Estimated 25% profit margin on stock
+    final double avgProfitMarginPct = 25.0; // 25.0% Average Profit Margin
+
     return Column(
       children: [
-        // Summary Cards
+        // 🌟 PREMIUM ESTIMATED PROFIT & STOCK HEADER
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: _summaryCard('Total Stock', '$_totalStockCount Pcs', Icons.inventory_2_outlined, const Color(0xFF2563EB)),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F172A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _summaryCard('Stock Value', '₹${fmt.format(_totalStockValue)}', Icons.account_balance_wallet_outlined, const Color(0xFF059669)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _summaryCard('Low Stock', '$_lowStockCount Items', Icons.warning_amber_rounded, const Color(0xFFDC2626)),
-              ),
-            ],
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.2), shape: BoxShape.circle),
+                              child: const Icon(Icons.trending_up_rounded, color: Color(0xFF10B981), size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('अंदाजित नफा (Est. Net Profit)', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text('₹${fmt.format(totalEstimatedProfit)}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF10B981), width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.auto_graph_rounded, color: Color(0xFF10B981), size: 14),
+                          const SizedBox(width: 4),
+                          Text('Avg ${avgProfitMarginPct.toStringAsFixed(1)}% Margin', style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                const Divider(color: Colors.white12, height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _miniStat('Total Stock Value', '₹${fmt.format(_totalStockValue)}', const Color(0xFF38BDF8)),
+                    _miniStat('Stock Count', '$_totalStockCount Pcs', Colors.white),
+                    _miniStat('Low Stock Alert', '$_lowStockCount Items', _lowStockCount > 0 ? const Color(0xFFF87171) : const Color(0xFF34D399)),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -634,6 +693,17 @@ class _InventoryScreenState extends State<InventoryScreen>
       ),
     );
   }
+
+  Widget _miniStat(String label, String value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.outfit(color: Colors.white60, fontSize: 10)),
+        const SizedBox(height: 2),
+        Text(value, style: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      ],
+    );
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -744,11 +814,23 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
                     Text('Total Bought: ₹${fmt.format(totalPurchased)} • Total Paid: ₹${fmt.format(totalPaid)}', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _showRecordSupplierPaymentDialog(),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  icon: const Icon(Icons.payment_rounded, color: Colors.white, size: 16),
-                  label: Text('Pay Supplier', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _showRecordSupplierPaymentDialog(),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                      icon: const Icon(Icons.payment_rounded, color: Colors.white, size: 14),
+                      label: Text('Pay Supplier', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                    ),
+                    const SizedBox(height: 6),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddProductForSupplierDialog(),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                      icon: const Icon(Icons.add_box_rounded, color: Colors.white, size: 14),
+                      label: Text('+ Add Product', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -870,6 +952,101 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
             child: const Text('Record Payment', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddProductForSupplierDialog() {
+    final prodCtrl = TextEditingController();
+    final rateCtrl = TextEditingController();
+    final qtyCtrl = TextEditingController(text: '1');
+    final paidCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Add Product for ${widget.supplier['name']}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: prodCtrl,
+                decoration: const InputDecoration(labelText: 'Product Name (e.g. Cotton Shirt)', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: rateCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Buy Rate (₹)', prefixText: '₹ ', border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: qtyCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: paidCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount Paid Now (₹)', prefixText: '₹ ', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: noteCtrl,
+                decoration: const InputDecoration(labelText: 'Notes (optional)', border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
+            onPressed: () async {
+              final prod = prodCtrl.text.trim();
+              final rate = double.tryParse(rateCtrl.text) ?? 0.0;
+              final qty = int.tryParse(qtyCtrl.text) ?? 0;
+              final paid = double.tryParse(paidCtrl.text) ?? 0.0;
+
+              if (prod.isEmpty || rate <= 0 || qty <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter Product name, Rate and Quantity')));
+                return;
+              }
+
+              await DatabaseHelper.instance.recordPurchase(
+                productName: prod,
+                supplierName: widget.supplier['name'],
+                purchaseRate: rate,
+                quantity: qty,
+                paidAmount: paid,
+                supplierPhone: widget.supplier['phone'] ?? '',
+                notes: noteCtrl.text.trim(),
+              );
+
+              if (mounted) {
+                Navigator.pop(ctx);
+                _loadSupplierData();
+                widget.onUpdate();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Added "$prod" under ${widget.supplier['name']}!'), backgroundColor: AppColors.emeraldGreen),
+                );
+              }
+            },
+            child: const Text('Add Product', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

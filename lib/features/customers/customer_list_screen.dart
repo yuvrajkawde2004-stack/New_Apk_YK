@@ -236,7 +236,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
   void _showEditCustomerDialog(Customer customer) {
     final nameCtrl = TextEditingController(text: customer.name);
-    final phoneCtrl = TextEditingController(text: customer.phone ?? '');
+    final cleanPhone = (customer.phone ?? '').replaceAll(RegExp(r'^\+91\s*'), '').replaceAll(RegExp(r'\D'), '');
+    final phoneCtrl = TextEditingController(text: cleanPhone);
     final notesCtrl = TextEditingController(text: customer.notes ?? '');
     final duesCtrl = TextEditingController(text: customer.outstandingBalance.toStringAsFixed(0));
 
@@ -257,7 +258,17 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               TextField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone Number', prefixIcon: Icon(Icons.phone_outlined)),
+                maxLength: 10,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number (10 digits)',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                  prefixText: '+91 ',
+                  counterText: '',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -282,9 +293,20 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
             onPressed: () async {
               if (nameCtrl.text.trim().isEmpty) return;
+              final rawPhone = phoneCtrl.text.trim();
+              if (rawPhone.isNotEmpty && rawPhone.length != 10) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Mobile number must be 10 digits (+91 followed by 10 digits)')),
+                );
+                return;
+              }
+              final phoneVal = rawPhone.isEmpty 
+                  ? 'N/A_${DateTime.now().millisecondsSinceEpoch}' 
+                  : (rawPhone.startsWith('+91') ? rawPhone : '+91 $rawPhone');
+
               await DatabaseHelper.instance.updateCustomer(customer.id!, {
                 'name': nameCtrl.text.trim(),
-                'phone': phoneCtrl.text.trim(),
+                'phone': phoneVal,
                 'address': notesCtrl.text.trim(),
                 'outstanding_balance': double.tryParse(duesCtrl.text.trim()) ?? 0.0,
               });

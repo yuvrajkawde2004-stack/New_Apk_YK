@@ -23,11 +23,14 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     
     final prefs = await SharedPreferences.getInstance();
-    // Auto keep logged in so app opens instantly every time!
-    await prefs.setBool('is_logged_in', true);
+    final bool isLoggedIn = prefs.getBool('is_logged_in') ?? false;
     
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      if (isLoggedIn) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     }
   }
 

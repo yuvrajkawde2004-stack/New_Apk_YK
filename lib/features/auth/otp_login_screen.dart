@@ -72,6 +72,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('is_logged_in', true);
+      await prefs.setString('user_id', email);
       
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/dashboard');
@@ -120,7 +121,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Text('Select an account to login & sync data with Cloud database:', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13)),
+              Text('Select an account to login to your app:', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13)),
               const SizedBox(height: 16),
 
               ...googleAccounts.map((acc) => ListTile(
