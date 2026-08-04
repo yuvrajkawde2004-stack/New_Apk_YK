@@ -9,6 +9,7 @@ import '../../core/providers/locale_provider.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import 'shop_profile_modal.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/services/cloudflare_api_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

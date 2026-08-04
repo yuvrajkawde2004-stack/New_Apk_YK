@@ -1046,11 +1046,6 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
     final amtCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
     String method = 'Cash';
-
-  void _showRecordSupplierPaymentDialog() {
-    final amtCtrl = TextEditingController();
-    final noteCtrl = TextEditingController();
-    String method = 'Cash';
     final supName = _currentSupplier['name'] ?? '';
 
     showDialog(
