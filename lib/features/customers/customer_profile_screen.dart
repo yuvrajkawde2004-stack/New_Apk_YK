@@ -757,7 +757,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13),
               ),
               const SizedBox(height: 20),
-              if ((bill['due_amount'] as num?)?.toDouble() ?? 0.0 > 0)
+              if (((bill['due_amount'] as num?)?.toDouble() ?? 0.0) > 0)
                 ListTile(
                   leading: const Icon(Icons.payments_rounded, color: Color(0xFF10B981)),
                   title: const Text('Receive Payment', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF10B981))),
