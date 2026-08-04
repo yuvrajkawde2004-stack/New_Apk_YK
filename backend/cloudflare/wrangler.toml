@@ -1,0 +1,14 @@
+name = "manisha-collection-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Cloudflare D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "manisha_collection_db"
+database_id = "d1-manisha-collection-id"
+
+# Cloudflare R2 Bucket Binding for Backup (Images / PDF Invoices)
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "manisha-collection-backups"
