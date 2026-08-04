@@ -550,7 +550,7 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
           const SizedBox(height: 20),
           _inputField('Full Name', Icons.person_outline_rounded, _nameCtrl),
           const SizedBox(height: 14),
-          _inputField('Phone Number (10 digits)', Icons.phone_outlined, _phoneCtrl, TextInputType.phone, isPhone: true),
+          _inputField('Phone Number (10 digits)', Icons.phone_outlined, _phoneCtrl, type: TextInputType.phone, isPhone: true),
           const SizedBox(height: 14),
           _inputField('Notes (optional)', Icons.note_outlined, _notesCtrl),
           const SizedBox(height: 24),
