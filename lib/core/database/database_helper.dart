@@ -1133,12 +1133,16 @@ class DatabaseHelper {
   Future<int> addSupplier(Map<String, dynamic> supplier) async {
     final db = await database;
     supplier['created_at'] = DateTime.now().toIso8601String();
+<<<<<<< HEAD
     supplier['is_deleted'] = 0;
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
     return await db.insert('suppliers', supplier, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> getSuppliers() async {
     final db = await database;
+<<<<<<< HEAD
     try {
       await db.execute('ALTER TABLE suppliers ADD COLUMN is_deleted INTEGER DEFAULT 0');
     } catch (_) {}
@@ -1151,6 +1155,9 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE suppliers ADD COLUMN is_deleted INTEGER DEFAULT 0');
     } catch (_) {}
     return await db.query('suppliers', where: 'is_deleted = 1', orderBy: 'name ASC');
+=======
+    return await db.query('suppliers', orderBy: 'name ASC');
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   }
 
   Future<Map<String, dynamic>?> getSupplierByName(String name) async {
@@ -1166,6 +1173,7 @@ class DatabaseHelper {
 
   Future<int> deleteSupplier(int id) async {
     final db = await database;
+<<<<<<< HEAD
     try {
       await db.execute('ALTER TABLE suppliers ADD COLUMN is_deleted INTEGER DEFAULT 0');
     } catch (_) {}
@@ -1211,6 +1219,9 @@ class DatabaseHelper {
       'avg_profit_per_item': avgProfitPerItem,
       'avg_profit_per_bill': avgProfitPerBill,
     };
+=======
+    return await db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   }
 
   Future<int> recordPurchase({

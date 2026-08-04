@@ -414,10 +414,17 @@ class _BillingScreenState extends State<BillingScreen> {
         Provider.of<DashboardProvider>(context, listen: false).refreshDashboard();
       }
       
+<<<<<<< HEAD
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
       setState(() => _isProcessing = false);
       _showBillSuccessfulAnimationAndNavigate(billData);
+=======
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+      _showInvoicePreviewDialog(billData, itemsData);
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
       
     } catch (e) {
       debugPrint('Bill save error: $e');
@@ -433,6 +440,7 @@ class _BillingScreenState extends State<BillingScreen> {
     }
   }
 
+<<<<<<< HEAD
   void _showBillSuccessfulAnimationAndNavigate(Map<String, dynamic> billData) {
     showDialog(
       context: context,
@@ -511,6 +519,8 @@ class _BillingScreenState extends State<BillingScreen> {
     });
   }
 
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   void _showInvoicePreviewDialog(Map<String, dynamic> billData, List<Map<String, dynamic>> itemsData) {
     final screenshotController = ScreenshotController();
     
@@ -1147,9 +1157,15 @@ class _BillingScreenState extends State<BillingScreen> {
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
+<<<<<<< HEAD
                                     const Icon(Icons.save_rounded, color: Colors.white, size: 22),
                                     const SizedBox(width: 10),
                                     Text(widget.billToEdit != null ? 'UPDATE & SAVE' : 'SAVE INVOICE', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+=======
+                                    const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 22),
+                                    const SizedBox(width: 10),
+                                    Text(widget.billToEdit != null ? 'UPDATE INVOICE' : 'GENERATE INVOICE', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                                   ],
                                 ),
                           ),

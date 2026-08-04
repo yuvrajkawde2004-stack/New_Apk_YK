@@ -8,7 +8,10 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/providers/locale_provider.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import 'shop_profile_modal.dart';
+<<<<<<< HEAD
 import '../../core/database/database_helper.dart';
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -161,12 +164,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _settingTile(
                   icon: Icons.cloud_done_rounded,
                   color: const Color(0xFF059669),
+<<<<<<< HEAD
                   title: 'Cloud Sync & Database',
                   subtitle: 'Status: ONLINE & SYNCED ✅',
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Cloud Database is active and syncing in real-time!'),
+=======
+                  title: 'Cloudflare Cloud Database',
+                  subtitle: 'Status: ONLINE & SYNCED ✅',
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Cloudflare Cloud Database is active and syncing in real-time!'),
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                         backgroundColor: AppColors.emeraldGreen,
                       ),
                     );
@@ -174,6 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _divider(),
                 _settingTile(
+<<<<<<< HEAD
                   icon: Icons.restore_from_trash_rounded,
                   color: const Color(0xFFEA580C),
                   title: 'Re-add Deleted Suppliers (री-ॲड सप्लायर)',
@@ -182,6 +195,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _divider(),
                 _settingTile(
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                   icon: Icons.security_rounded,
                   color: AppColors.royalBlue,
                   title: 'App Security & PIN Lock',
@@ -333,6 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+<<<<<<< HEAD
   void _showDeletedSuppliersDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -428,6 +444,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   Widget _sectionTitle(String text) {
     return Text(
       text,

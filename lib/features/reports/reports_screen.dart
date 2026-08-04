@@ -232,10 +232,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
+<<<<<<< HEAD
                             child: GestureDetector(
                               onLongPress: () => _showAverageProfitModal(context),
                               child: _miniMetricCard('Est. Net Profit', estProfit > 0 ? estProfit : 0.0, 'अंदाजित नफा (Hold 10s)', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
                             ),
+=======
+                            child: _miniMetricCard('Est. Net Profit', estProfit > 0 ? estProfit : 0.0, 'अंदाजित नफा', Icons.trending_up_rounded, const Color(0xFF059669), const Color(0xFFECFDF5)),
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                           ),
                         ],
                       ),
@@ -315,6 +319,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+<<<<<<< HEAD
   void _showAverageProfitModal(BuildContext context) {
     showDialog(
       context: context,
@@ -401,6 +406,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   Widget _miniMetricCard(String title, double val, String sub, IconData icon, Color color, Color bg) {
     return Container(
       padding: const EdgeInsets.all(16),

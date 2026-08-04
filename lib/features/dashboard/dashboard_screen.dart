@@ -128,6 +128,7 @@ class _HomeTab extends StatelessWidget {
                               ),
                             ],
                           ),
+<<<<<<< HEAD
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
@@ -142,12 +143,54 @@ class _HomeTab extends StatelessWidget {
                               ],
                             ),
                             child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimaryLight, size: 20),
+=======
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: onAddCustomer,
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [AppColors.royalBlue, Color(0xFF3B82F6)],
+                                    ),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.royalBlue.withValues(alpha: 0.35),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(Icons.person_add_rounded, color: Colors.white, size: 20),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.06),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimaryLight, size: 20),
+                              ),
+                            ],
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                           ),
                         ],
                       ).animate().fadeIn().slideY(begin: -0.1, end: 0),
 
                       const SizedBox(height: 20),
 
+<<<<<<< HEAD
                       // 👑 2. ULTRA-PREMIUM HERO REVENUE BANNER (Long press for Average Profit)
                       GestureDetector(
                         onLongPress: () => _showAverageProfitModal(context),
@@ -169,6 +212,27 @@ class _HomeTab extends StatelessWidget {
                               ),
                             ],
                           ),
+=======
+                      // 👑 2. ULTRA-PREMIUM HERO REVENUE BANNER
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF312E81)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF1E1B4B).withValues(alpha: 0.4),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -271,7 +335,10 @@ class _HomeTab extends StatelessWidget {
                             ),
                           ],
                         ),
+<<<<<<< HEAD
                       ),
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                       ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
 
                       const SizedBox(height: 26),
@@ -347,7 +414,11 @@ class _HomeTab extends StatelessWidget {
                           ),
                           _buildActionCard(
                             context: context,
+<<<<<<< HEAD
                             title: 'Customer',
+=======
+                            title: 'Customers & Dues',
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                             subtitle: '${provider.totalCustomers} Customer List',
                             icon: Icons.people_alt_rounded,
                             gradient: const LinearGradient(
@@ -462,6 +533,7 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
+<<<<<<< HEAD
   void _showAverageProfitModal(BuildContext context) {
     showDialog(
       context: context,
@@ -548,6 +620,8 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
+=======
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   Widget _heroStatItem({
     required IconData icon,
     required String label,

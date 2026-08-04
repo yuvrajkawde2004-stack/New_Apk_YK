@@ -593,6 +593,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                       : _customerBills.isEmpty
                           ? const Text('No bills found for this customer yet.')
                           : Column(
+<<<<<<< HEAD
                               children: _customerBills.map((b) {
                                 final dueAmt = (b['due_amount'] as num?)?.toDouble() ?? 0.0;
                                 final isPaid = dueAmt <= 0;
@@ -617,6 +618,23 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                                   ),
                                 );
                               }).toList(),
+=======
+                              children: _customerBills.map((b) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildMockInvoiceCard(
+                                  b['bill_number'] ?? '', 
+                                  '₹ ${b['grand_total']}', 
+                                  b['bill_date'] ?? '', 
+                                  true, // Assuming paid for now
+                                  () {
+                                    _openWhatsAppChat(b);
+                                  },
+                                  onLongPress: () {
+                                    _showBillOptionsBottomSheet(b);
+                                  },
+                                ),
+                              )).toList(),
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                             ),
                 ],
               ),
@@ -627,6 +645,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildMockInvoiceCard(String id, String amount, String date, bool paid, double dueAmount, VoidCallback onShare, {VoidCallback? onLongPress}) {
     final statusColor = paid ? const Color(0xFF10B981) : const Color(0xFFEF4444);
     return GestureDetector(
@@ -720,6 +739,93 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           ],
         ),
       ),
+=======
+  Widget _buildMockInvoiceCard(String id, String amount, String date, bool paid, VoidCallback onShare, {VoidCallback? onLongPress}) {
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.royalBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.receipt_rounded, color: AppColors.royalBlue, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    id,
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    date,
+                    style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    amount,
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimaryLight),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: paid ? AppColors.emeraldGreen.withValues(alpha: 0.1) : AppColors.softOrange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      paid ? 'Paid' : 'Pending',
+                      style: GoogleFonts.outfit(
+                        color: paid ? AppColors.emeraldGreen : AppColors.softOrange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 20),
+                onPressed: onShare,
+                tooltip: 'WhatsApp वर पाठवा',
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+>>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
     );
   }
 
