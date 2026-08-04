@@ -571,7 +571,7 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
     );
   }
 
-  Widget _inputField(String label, IconData icon, TextEditingController controller, [TextInputType? type, bool isPhone = false]) {
+  Widget _inputField(String label, IconData icon, TextEditingController controller, {TextInputType? type, bool isPhone = false}) {
     return TextField(
       controller: controller,
       keyboardType: type,

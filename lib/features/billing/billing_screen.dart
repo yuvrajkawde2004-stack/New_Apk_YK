@@ -16,6 +16,7 @@ import '../../core/models/product.dart';
 import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
 import '../dashboard/providers/dashboard_provider.dart';
+import '../customers/customer_list_screen.dart';
 import 'templates/invoice_template_classic_gst.dart';
 import 'templates/invoice_template_premium_gold.dart';
 import 'templates/invoice_template_modern_emerald.dart';
@@ -511,8 +512,6 @@ class _BillingScreenState extends State<BillingScreen> {
     });
   }
 
-=======
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
   void _showInvoicePreviewDialog(Map<String, dynamic> billData, List<Map<String, dynamic>> itemsData) {
     final screenshotController = ScreenshotController();
     

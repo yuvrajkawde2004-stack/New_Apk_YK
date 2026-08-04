@@ -143,7 +143,6 @@ class _HomeTab extends StatelessWidget {
                             ),
                             child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimaryLight, size: 20),
                           ),
-                          ),
                         ],
                       ).animate().fadeIn().slideY(begin: -0.1, end: 0),
 
@@ -170,27 +169,6 @@ class _HomeTab extends StatelessWidget {
                               ),
                             ],
                           ),
-=======
-                      // 👑 2. ULTRA-PREMIUM HERO REVENUE BANNER
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF312E81)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF1E1B4B).withValues(alpha: 0.4),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
->>>>>>> f9f7ac957573f0687f6e1d8855c034856ebba6c0
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
