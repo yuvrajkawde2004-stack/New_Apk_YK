@@ -35,7 +35,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 13,
+      version: 14,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -176,7 +176,7 @@ class DatabaseHelper {
       ''');
     }
 
-    if (oldVersion < 13) {
+    if (oldVersion < 14) {
       // 1. Add unit column to products
       try { await db.execute("ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'PCS'"); } catch (_) {}
       
