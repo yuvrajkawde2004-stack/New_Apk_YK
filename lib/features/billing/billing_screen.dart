@@ -172,7 +172,8 @@ class _BillingScreenState extends State<BillingScreen> {
       final idx = _items.indexOf(item);
       if (idx != -1 && _itemsScrollController.hasClients) {
         final maxScroll = _itemsScrollController.position.maxScrollExtent;
-        final targetOffset = (idx * 130.0).clamp(0.0, maxScroll);
+        // Adjusted offset for top widgets (Customer Card, Search, etc.) which take approx 250px
+        final targetOffset = (250.0 + idx * 130.0).clamp(0.0, maxScroll);
         _itemsScrollController.animateTo(
           targetOffset,
           duration: const Duration(milliseconds: 350),
@@ -738,10 +739,19 @@ class _BillingScreenState extends State<BillingScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // 👤 Premium Customer Card
-            GestureDetector(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              controller: _itemsScrollController,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      children: [
+                    // 👤 Premium Customer Card
+                    GestureDetector(
               onTap: _showCustomerSelectionSheet,
               child: Container(
                 margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -814,6 +824,7 @@ class _BillingScreenState extends State<BillingScreen> {
 
             // 🔍 Search Bar & Dropdown
             Stack(
+              clipBehavior: Clip.none,
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -944,9 +955,10 @@ class _BillingScreenState extends State<BillingScreen> {
               ),
 
             // 🛒 Premium Items List
-            Expanded(
-              child: _items.isEmpty
-                  ? Center(
+            _items.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 60.0, bottom: 60.0),
+                    child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -964,12 +976,14 @@ class _BillingScreenState extends State<BillingScreen> {
                           Text('Add items from stock or enter product name', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 14)),
                         ],
                       ).animate().fadeIn(duration: 400.ms).scale(curve: Curves.easeOutBack),
-                    )
-                  : ListView.builder(
-                      controller: _itemsScrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: _items.length,
-                      itemBuilder: (_, i) {
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: _items.length,
+                    itemBuilder: (_, i) {
                         final item = _items[i];
                         return Dismissible(
                           key: ObjectKey(item),
@@ -1102,10 +1116,11 @@ class _BillingScreenState extends State<BillingScreen> {
                         ).animate().slideX(delay: (i * 40).ms, begin: 0.1).fadeIn();
                       },
                     ),
-            ),
+                  ],
+                ),
 
-            // 🧾 Premium Footer
-            ClipRRect(
+                // 🧾 Premium Footer
+                ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -1269,9 +1284,11 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 

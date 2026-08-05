@@ -327,7 +327,7 @@ class _HomeTab extends StatelessWidget {
                           ),
                           _buildActionCard(
                             context: context,
-                            title: 'Inventory & Stock',
+                            title: 'Stock',
                             subtitle: '${provider.totalProducts} Items Available',
                             icon: Icons.inventory_2_rounded,
                             gradient: const LinearGradient(

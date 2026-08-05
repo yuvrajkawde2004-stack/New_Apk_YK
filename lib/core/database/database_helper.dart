@@ -1369,6 +1369,9 @@ class DatabaseHelper {
     required double paidAmount,
     String? supplierPhone,
     String? notes,
+    double? sellingPrice,
+    String? unit,
+    int? lowStockLimit,
   }) async {
     final db = await database;
     final totalAmount = purchaseRate * quantity;
@@ -1395,10 +1398,16 @@ class DatabaseHelper {
       final existingProds = await txn.query('products', where: 'product_name = ?', whereArgs: [productName], limit: 1);
       if (existingProds.isNotEmpty) {
         final pId = existingProds.first['id'] as int;
-        await txn.rawUpdate(
-          'UPDATE products SET quantity = quantity + ?, purchase_rate = ? WHERE id = ?',
-          [quantity, purchaseRate, pId],
-        );
+        
+        // Build dynamic update query to include unit and lowStockLimit if provided
+        final updates = <String, dynamic>{
+          'quantity': (existingProds.first['quantity'] as int? ?? 0) + quantity,
+          'purchase_rate': purchaseRate,
+        };
+        if (unit != null && unit.isNotEmpty) updates['unit'] = unit;
+        if (lowStockLimit != null) updates['low_stock_limit'] = lowStockLimit;
+        
+        await txn.update('products', updates, where: 'id = ?', whereArgs: [pId]);
       } else {
         await txn.insert('products', {
           'product_name': productName,
@@ -1408,7 +1417,8 @@ class DatabaseHelper {
           'supplier_name': supplierName,
           'purchase_date': nowStr,
           'notes': notes ?? '',
-          'low_stock_limit': 5,
+          'low_stock_limit': lowStockLimit ?? 5,
+          'unit': unit ?? 'PCS',
           'created_at': nowStr,
         });
       }

@@ -1111,43 +1111,83 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
     final qtyCtrl = TextEditingController(text: '1');
     final paidCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
+    final sellCtrl = TextEditingController();
+    final lowStockCtrl = TextEditingController(text: '5');
+    String selectedUnit = 'PCS';
+    final units = ['PCS', 'PAIR', 'KG', 'G', 'MTR', 'ROLL', 'BOX', 'PACK', 'SET', 'DOZ', 'LTR', 'ML'];
     final supName = _currentSupplier['name'] ?? '';
     final supPhone = _currentSupplier['phone'] ?? '';
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Add Product for $supName', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: prodCtrl,
-                decoration: const InputDecoration(labelText: 'Product Name (e.g. Cotton Shirt)', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: rateCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Buy Rate (₹)', prefixText: '₹ ', border: OutlineInputBorder()),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Add Product for $supName', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: prodCtrl,
+                  decoration: const InputDecoration(labelText: 'Product Name (e.g. Cotton Shirt)', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: rateCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Buy Rate (₹)', prefixText: '₹ ', border: OutlineInputBorder()),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: qtyCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: sellCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Selling Price (MRP)', prefixText: '₹ ', border: OutlineInputBorder()),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: qtyCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<String>(
+                        value: selectedUnit,
+                        decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
+                        items: units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                        onChanged: (val) => setState(() => selectedUnit = val ?? 'PCS'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: lowStockCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Low Stock Limit', border: OutlineInputBorder()),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
               TextField(
                 controller: paidCtrl,
                 keyboardType: TextInputType.number,
@@ -1163,41 +1203,47 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
-            onPressed: () async {
-              final prod = prodCtrl.text.trim();
-              final rate = double.tryParse(rateCtrl.text) ?? 0.0;
-              final qty = int.tryParse(qtyCtrl.text) ?? 0;
-              final paid = double.tryParse(paidCtrl.text) ?? 0.0;
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue),
+              onPressed: () async {
+                final prod = prodCtrl.text.trim();
+                final rate = double.tryParse(rateCtrl.text) ?? 0.0;
+                final sell = double.tryParse(sellCtrl.text) ?? 0.0;
+                final qty = int.tryParse(qtyCtrl.text) ?? 0;
+                final paid = double.tryParse(paidCtrl.text) ?? 0.0;
+                final lowStock = int.tryParse(lowStockCtrl.text) ?? 5;
 
-              if (prod.isEmpty || rate <= 0 || qty <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter Product name, Rate and Quantity')));
-                return;
-              }
+                if (prod.isEmpty || rate <= 0 || qty <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter Product name, Rate and Quantity')));
+                  return;
+                }
 
-              await DatabaseHelper.instance.recordPurchase(
-                productName: prod,
-                supplierName: supName,
-                purchaseRate: rate,
-                quantity: qty,
-                paidAmount: paid,
-                supplierPhone: supPhone,
-                notes: noteCtrl.text.trim(),
-              );
-
-              if (mounted) {
-                Navigator.pop(ctx);
-                await _loadSupplierData();
-                widget.onUpdate();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Added "$prod" under $supName!'), backgroundColor: AppColors.emeraldGreen),
+                await DatabaseHelper.instance.recordPurchase(
+                  productName: prod,
+                  supplierName: supName,
+                  purchaseRate: rate,
+                  quantity: qty,
+                  paidAmount: paid,
+                  supplierPhone: supPhone,
+                  notes: noteCtrl.text.trim(),
+                  sellingPrice: sell,
+                  unit: selectedUnit,
+                  lowStockLimit: lowStock,
                 );
-              }
-            },
-            child: const Text('Add Product', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  await _loadSupplierData();
+                  widget.onUpdate();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Added "$prod" under $supName!'), backgroundColor: AppColors.emeraldGreen),
+                  );
+                }
+              },
+              child: const Text('Add Product', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }
