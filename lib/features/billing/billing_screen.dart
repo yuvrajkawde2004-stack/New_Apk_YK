@@ -167,15 +167,19 @@ class _BillingScreenState extends State<BillingScreen> {
   double get _dueAmount => (_grandTotal - _paidAmount).clamp(0.0, double.infinity);
 
   void _scrollToItem(_BillItem item) {
-    final idx = _items.indexOf(item);
-    if (idx != -1 && _itemsScrollController.hasClients) {
-      final targetOffset = (idx * 110.0).clamp(0.0, _itemsScrollController.position.maxScrollExtent);
-      _itemsScrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOutCubic,
-      );
-    }
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final idx = _items.indexOf(item);
+      if (idx != -1 && _itemsScrollController.hasClients) {
+        final maxScroll = _itemsScrollController.position.maxScrollExtent;
+        final targetOffset = (idx * 130.0).clamp(0.0, maxScroll);
+        _itemsScrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
   }
 
   void _addItem(Product? p, {String? customName}) {
@@ -736,59 +740,70 @@ class _BillingScreenState extends State<BillingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 👤 Customer Card
+            // 👤 Premium Customer Card
             GestureDetector(
               onTap: _showCustomerSelectionSheet,
               child: Container(
                 margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.royalBlue.withValues(alpha: 0.2)),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8)),
                   ],
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppColors.royalBlue.withValues(alpha: 0.15),
-                      child: Text(
-                        (_selectedCustomer?.name.isNotEmpty == true) ? _selectedCustomer!.name[0].toUpperCase() : 'C',
-                        style: GoogleFonts.outfit(color: AppColors.royalBlue, fontWeight: FontWeight.bold, fontSize: 18),
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFF818CF8)]),
+                      ),
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: const Color(0xFF1E293B),
+                        child: Text(
+                          (_selectedCustomer?.name.isNotEmpty == true) ? _selectedCustomer!.name[0].toUpperCase() : 'C',
+                          style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             _selectedCustomer?.name ?? 'Select Customer (Walk-in)',
-                            style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15),
+                            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
                             _selectedCustomer?.phone ?? 'Tap here to pick customer from list ▾',
-                            style: GoogleFonts.outfit(color: AppColors.royalBlue, fontSize: 12, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.royalBlue.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Change', style: GoogleFonts.outfit(color: AppColors.royalBlue, fontSize: 11, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 2),
-                          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.royalBlue, size: 16),
+                          Text('Change', style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 16),
                         ],
                       ),
                     ),
@@ -928,19 +943,27 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
 
-            // 🛒 Items List
+            // 🛒 Premium Items List
             Expanded(
               child: _items.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.shopping_basket_rounded, size: 80, color: AppColors.royalBlue.withValues(alpha: 0.15)),
-                          const SizedBox(height: 16),
-                          Text('Cart is empty', style: GoogleFonts.outfit(color: AppColors.textPrimaryLight, fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text('Add items from stock or enter product name above', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 13)),
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppColors.royalBlue.withValues(alpha: 0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.shopping_bag_outlined, size: 64, color: AppColors.royalBlue.withValues(alpha: 0.5)),
+                          ),
+                          const SizedBox(height: 20),
+                          Text('Cart is empty', style: GoogleFonts.outfit(color: const Color(0xFF1E293B), fontSize: 20, fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 6),
+                          Text('Add items from stock or enter product name', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 14)),
                         ],
-                      ).animate().fadeIn().scale(),
+                      ).animate().fadeIn(duration: 400.ms).scale(curve: Curves.easeOutBack),
                     )
                   : ListView.builder(
                       controller: _itemsScrollController,
@@ -953,267 +976,295 @@ class _BillingScreenState extends State<BillingScreen> {
                           direction: DismissDirection.endToStart,
                           background: Container(
                             alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
+                            padding: const EdgeInsets.only(right: 24),
                             margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(20)),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Color(0xFFF87171), Color(0xFFEF4444)]),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                             child: const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 28),
                           ),
                           onDismissed: (_) => _removeItem(i),
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
-                              border: Border.all(color: Colors.grey.shade100),
+                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 6))],
+                              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(item.product != null ? Icons.inventory_rounded : Icons.label_important_rounded, 
-                                      color: item.product != null ? AppColors.royalBlue : const Color(0xFFF59E0B), size: 18),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(item.name, 
-                                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: const Color(0xFF1E293B))),
-                                    ),
-                                    Text('₹${fmt.format(item.total)}', 
-                                      style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.royalBlue)),
-                                  ],
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border(left: BorderSide(color: item.product != null ? AppColors.royalBlue : const Color(0xFFF59E0B), width: 4)),
                                 ),
-                                const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1)),
-                                Row(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Custom Price Input
-                                    Expanded(
-                                      flex: 3,
-                                      child: Container(
-                                        height: 44,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF1F5F9),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.grey.shade300),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Text('₹ ', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight)),
-                                            Expanded(
-                                              child: TextField(
-                                                controller: item.priceCtrl,
-                                                focusNode: item.priceFocusNode,
-                                                keyboardType: TextInputType.number,
-                                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
-                                                decoration: const InputDecoration(
-                                                  hintText: 'Enter Price',
-                                                  border: InputBorder.none,
-                                                  isDense: true,
-                                                ),
-                                                onTap: () => _scrollToItem(item),
-                                                onChanged: (val) {
-                                                  setState(() {
-                                                    item.price = double.tryParse(val) ?? 0;
-                                                  });
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    // Quantity Stepper
-                                    Container(
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.grey.shade300),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          _qtyBtn(Icons.remove, () {
-                                            setState(() { if (item.qty > 1) item.qty--; else _items.removeAt(i); });
-                                          }),
-                                          SizedBox(
-                                            width: 32,
-                                            child: Text('${item.qty}', textAlign: TextAlign.center, 
-                                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: item.product != null ? AppColors.royalBlue.withValues(alpha: 0.1) : const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(10),
                                           ),
-                                          _qtyBtn(Icons.add, () => setState(() => item.qty++)),
-                                        ],
-                                      ),
+                                          child: Icon(item.product != null ? Icons.inventory_2_rounded : Icons.label_important_rounded, 
+                                            color: item.product != null ? AppColors.royalBlue : const Color(0xFFF59E0B), size: 18),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(item.name, 
+                                            style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A))),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text('₹${fmt.format(item.total)}', 
+                                            style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 15, color: const Color(0xFF0F172A))),
+                                        ),
+                                      ],
+                                    ),
+                                    const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: Color(0xFFF1F5F9))),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 3,
+                                          child: Container(
+                                            height: 48,
+                                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF8FAFC),
+                                              borderRadius: BorderRadius.circular(14),
+                                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Text('₹ ', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8))),
+                                                Expanded(
+                                                  child: TextField(
+                                                    controller: item.priceCtrl,
+                                                    focusNode: item.priceFocusNode,
+                                                    keyboardType: TextInputType.number,
+                                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
+                                                    decoration: const InputDecoration(
+                                                      hintText: 'Enter Price',
+                                                      border: InputBorder.none,
+                                                      isDense: true,
+                                                    ),
+                                                    onTap: () => _scrollToItem(item),
+                                                    onChanged: (val) {
+                                                      setState(() {
+                                                        item.price = double.tryParse(val) ?? 0;
+                                                      });
+                                                    },
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Container(
+                                          height: 48,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF8FAFC),
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              _qtyBtn(Icons.remove_rounded, () {
+                                                setState(() { if (item.qty > 1) item.qty--; else _items.removeAt(i); });
+                                              }),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                alignment: Alignment.center,
+                                                child: Text('${item.qty} ${item.product?.unit ?? 'PCS'}', 
+                                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 16, color: const Color(0xFF0F172A))),
+                                              ),
+                                              _qtyBtn(Icons.add_rounded, () => setState(() => item.qty++)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ).animate().slideX(delay: (i * 50).ms, begin: 0.2).fadeIn();
+                        ).animate().slideX(delay: (i * 40).ms, begin: 0.1).fadeIn();
                       },
                     ),
             ),
 
-            // 🧾 Footer
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, -10))],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // 🧾 Premium Footer
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    border: Border(top: BorderSide(color: Colors.white.withOpacity(0.4), width: 1.5)),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, -8))],
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Subtotal', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500)),
-                          Text('₹${fmt.format(_subtotal)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      
-                      // 💵 Amount Received Input
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Received Amount', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontWeight: FontWeight.w600, fontSize: 13)),
-                              Text('Amount Paid (₹)', style: GoogleFonts.outfit(color: Colors.grey.shade500, fontSize: 11)),
+                              Text('Subtotal', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 14)),
+                              Text('₹${fmt.format(_subtotal)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF1E293B))),
                             ],
                           ),
-                          SizedBox(
-                            width: 120,
-                            height: 38,
-                            child: TextField(
-                              controller: _paidAmountCtrl,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.right,
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.emeraldGreen, fontSize: 15),
-                              onChanged: (v) {
-                                setState(() {
-                                  _isManualPaidAmount = true;
-                                });
-                              },
-                              decoration: InputDecoration(
-                                prefixText: '₹',
-                                prefixStyle: GoogleFonts.outfit(color: AppColors.emeraldGreen, fontWeight: FontWeight.bold),
-                                hintText: _grandTotal.toStringAsFixed(0),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                                filled: true,
-                                fillColor: AppColors.emeraldGreen.withValues(alpha: 0.1),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Received Amount', style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 14)),
+                                  Text('Enter paid amount', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12)),
+                                ],
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1)),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Grand Total', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w900, color: const Color(0xFF1E293B))),
-                          Text('₹${fmt.format(_grandTotal)}', 
-                            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // 📌 Remaining Balance / Status Banner
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _dueAmount > 0 ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _dueAmount > 0 ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _dueAmount > 0 ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
-                              color: _dueAmount > 0 ? Colors.redAccent : AppColors.emeraldGreen,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              _dueAmount > 0 ? 'Remaining balance is ₹${fmt.format(_dueAmount)}' : 'Payment Status: PAID ✅',
-                              style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: _dueAmount > 0 ? Colors.red.shade700 : AppColors.emeraldGreen,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Payment Methods
-                      SizedBox(
-                        height: 40,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: _paymentMethods.map((m) {
-                            final sel = _paymentMethod == m;
-                            return GestureDetector(
-                              onTap: () => setState(() => _paymentMethod = m),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.only(right: 12),
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: sel ? const Color(0xFF1E293B) : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: sel ? const Color(0xFF1E293B) : Colors.grey.shade300),
+                              SizedBox(
+                                width: 130,
+                                height: 42,
+                                child: TextField(
+                                  controller: _paidAmountCtrl,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.right,
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF10B981), fontSize: 16),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      _isManualPaidAmount = true;
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    prefixText: '₹ ',
+                                    prefixStyle: GoogleFonts.outfit(color: const Color(0xFF10B981), fontWeight: FontWeight.bold),
+                                    hintText: _grandTotal.toStringAsFixed(0),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                    filled: true,
+                                    fillColor: const Color(0xFF10B981).withOpacity(0.1),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                                  ),
                                 ),
-                                child: Text(m, style: GoogleFonts.outfit(
-                                  color: sel ? Colors.white : AppColors.textSecondaryLight, 
-                                  fontWeight: sel ? FontWeight.bold : FontWeight.w500)),
                               ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Generate Button
-                      GestureDetector(
-                        onTap: _processPayment,
-                        child: Container(
-                          width: double.infinity,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [AppColors.royalBlue, Color(0xFF2563EB)]),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [BoxShadow(color: AppColors.royalBlue.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(0, 8))],
+                            ],
                           ),
-                          child: Center(
-                            child: _isProcessing 
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                          const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Divider(height: 1, color: Color(0xFFE2E8F0))),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Grand Total', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+                                  Text('₹${fmt.format(_grandTotal)}', 
+                                    style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w900, color: const Color(0xFF0F172A), height: 1.1)),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _dueAmount > 0 ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: _dueAmount > 0 ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.save_rounded, color: Colors.white, size: 22),
-                                    const SizedBox(width: 10),
-                                    Text(widget.billToEdit != null ? 'UPDATE & SAVE' : 'SAVE INVOICE', style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                                    Icon(
+                                      _dueAmount > 0 ? Icons.warning_amber_rounded : Icons.check_circle_rounded,
+                                      color: _dueAmount > 0 ? Colors.redAccent : const Color(0xFF10B981),
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _dueAmount > 0 ? 'Due: ₹${fmt.format(_dueAmount)}' : 'PAID',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: _dueAmount > 0 ? Colors.red.shade700 : const Color(0xFF10B981),
+                                      ),
+                                    ),
                                   ],
                                 ),
+                              ),
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 44,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: _paymentMethods.map((m) {
+                                final sel = _paymentMethod == m;
+                                return GestureDetector(
+                                  onTap: () => setState(() => _paymentMethod = m),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeOutCubic,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: sel ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: sel ? [BoxShadow(color: const Color(0xFF0F172A).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))] : [],
+                                    ),
+                                    child: Text(m, style: GoogleFonts.outfit(
+                                      color: sel ? Colors.white : const Color(0xFF64748B), 
+                                      fontWeight: FontWeight.w700, fontSize: 14)),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          GestureDetector(
+                            onTap: _processPayment,
+                            child: Container(
+                              width: double.infinity,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF2563EB)]),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
+                              ),
+                              child: Center(
+                                child: _isProcessing 
+                                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 22),
+                                        const SizedBox(width: 10),
+                                        Text(widget.billToEdit != null ? 'UPDATE INVOICE' : 'GENERATE INVOICE', 
+                                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                                      ],
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

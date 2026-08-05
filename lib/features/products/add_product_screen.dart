@@ -22,7 +22,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _purchaseController = TextEditingController();
   final _stockController = TextEditingController();
   final _barcodeController = TextEditingController();
+  final _unitController = TextEditingController(text: 'PCS');
 
+  List<String> _availableUnits = ['PCS', 'PAIR', 'KG', 'MTR', 'BOX', 'LTR'];
   String? _selectedGst;
   String? _selectedColor;
   bool _isSaving = false;
@@ -43,6 +45,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _colors = ['Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Orange', 'White', 'Black', 'Maroon', 'Navy', 'Teal'];
 
   @override
+  void initState() {
+    super.initState();
+    _loadUnits();
+  }
+
+  Future<void> _loadUnits() async {
+    final units = await DatabaseHelper.instance.getUnits();
+    if (units.isNotEmpty) {
+      setState(() => _availableUnits = units);
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _brandController.dispose();
@@ -51,6 +66,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _purchaseController.dispose();
     _stockController.dispose();
     _barcodeController.dispose();
+    _unitController.dispose();
     super.dispose();
   }
 
@@ -63,6 +79,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isSaving = true);
     
     try {
+      String unitText = _unitController.text.trim().toUpperCase();
+      if (unitText.isEmpty) unitText = 'PCS';
+      
+      // Silently add new unit to database if it doesn't exist
+      await DatabaseHelper.instance.addUnit(unitText);
+
       await DatabaseHelper.instance.addProduct({
         'product_name': _nameController.text.trim(),
         'category': 'Default', // Category removed per request
@@ -73,6 +95,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         'purchase_date': DateTime.now().toIso8601String(),
         'low_stock_limit': 5,
         'created_at': DateTime.now().toIso8601String(),
+        'unit': unitText,
       });
 
       if (!mounted) return;
@@ -168,12 +191,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 const SizedBox(height: 16),
                 _field(controller: _brandController, label: 'Supplier / Purchase Name', icon: Icons.branding_watermark),
                 const SizedBox(height: 16),
-                // Category removed
-                _dropdown(
-                  label: 'Color',
-                  value: _selectedColor,
-                  items: _colors,
-                  onChanged: (v) => setState(() => _selectedColor = v),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: _unitAutocompleteField(),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: _dropdown(
+                        label: 'Color',
+                        value: _selectedColor,
+                        items: _colors,
+                        onChanged: (v) => setState(() => _selectedColor = v),
+                      ),
+                    ),
+                  ],
                 ),
               ], 0),
 
@@ -343,6 +377,77 @@ class _AddProductScreenState extends State<AddProductScreen> {
       items: items
           .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
           .toList(),
+    );
+  }
+
+  Widget _unitAutocompleteField() {
+    return Autocomplete<String>(
+      initialValue: TextEditingValue(text: _unitController.text),
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (textEditingValue.text.isEmpty) {
+          return _availableUnits;
+        }
+        return _availableUnits.where((String option) {
+          return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+        });
+      },
+      onSelected: (String selection) {
+        _unitController.text = selection;
+      },
+      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+        textEditingController.addListener(() {
+          _unitController.text = textEditingController.text;
+        });
+        return TextFormField(
+          controller: textEditingController,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: 'Unit',
+            prefixIcon: const Icon(Icons.straighten_rounded, color: AppColors.royalBlue, size: 20),
+            filled: true,
+            fillColor: AppColors.backgroundLight,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.royalBlue, width: 1.5),
+            ),
+          ),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 150),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String option = options.elementAt(index);
+                  return InkWell(
+                    onTap: () => onSelected(option),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(option, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -35,7 +35,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 12,
+      version: 13,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -175,6 +175,30 @@ class DatabaseHelper {
         )
       ''');
     }
+
+    if (oldVersion < 13) {
+      // 1. Add unit column to products
+      try { await db.execute("ALTER TABLE products ADD COLUMN unit TEXT DEFAULT 'PCS'"); } catch (_) {}
+      
+      // 2. Create units table for suggestions
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS units(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE
+        )
+      ''');
+      
+      // Insert default units
+      final defaultUnits = [
+        'PCS', 'PAIR', 'KG', 'G', 'MTR', 'ROLL', 'BOX', 
+        'PACK', 'SET', 'DOZ', 'LTR', 'ML'
+      ];
+      for (String unit in defaultUnits) {
+        try {
+          await db.insert('units', {'name': unit}, conflictAlgorithm: ConflictAlgorithm.ignore);
+        } catch (_) {}
+      }
+    }
   }
 
   // ==========================
@@ -194,9 +218,26 @@ class DatabaseHelper {
         notes TEXT,
         low_stock_limit INTEGER NOT NULL DEFAULT 5,
         created_at TEXT NOT NULL,
-        updated_at TEXT
+        updated_at TEXT,
+        unit TEXT DEFAULT 'PCS'
       )
     ''');
+
+    // UNITS TABLE
+    await db.execute('''
+      CREATE TABLE units(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      )
+    ''');
+    
+    final defaultUnits = [
+      'PCS', 'PAIR', 'KG', 'G', 'MTR', 'ROLL', 'BOX', 
+      'PACK', 'SET', 'DOZ', 'LTR', 'ML'
+    ];
+    for (String unit in defaultUnits) {
+      await db.insert('units', {'name': unit}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
 
     // CUSTOMERS TABLE
     await db.execute('''
@@ -1506,5 +1547,21 @@ class DatabaseHelper {
       await txn.delete('bill_items');
       await txn.delete('sync_logs');
     });
+  }
+  // ==========================
+  // 10. UNITS CRUD
+  // ==========================
+
+  Future<List<String>> getUnits() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('units', orderBy: 'name ASC');
+    return maps.map((e) => e['name'] as String).toList();
+  }
+
+  Future<void> addUnit(String name) async {
+    final db = await database;
+    try {
+      await db.insert('units', {'name': name.toUpperCase()}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    } catch (_) {}
   }
 }

@@ -14,6 +14,7 @@ class Product {
   final int stock;
   final int lowStockThreshold;
   final String? imagePath;
+  final String unit;
 
   const Product({
     this.id,
@@ -30,6 +31,7 @@ class Product {
     required this.stock,
     this.lowStockThreshold = 5,
     this.imagePath,
+    this.unit = 'PCS',
   });
 
   Map<String, dynamic> toMap() => {
@@ -47,23 +49,25 @@ class Product {
         'stock': stock,
         'low_stock_threshold': lowStockThreshold,
         'image_path': imagePath,
+        'unit': unit,
       };
 
   factory Product.fromMap(Map<String, dynamic> map) => Product(
         id: map['id'],
-        name: map['name'],
+        name: map['name'] ?? map['product_name'] ?? 'Unknown',
         category: map['category'],
-        brand: map['brand'],
+        brand: map['brand'] ?? map['supplier_name'],
         color: map['color'],
         size: map['size'],
-        mrp: (map['mrp'] as num).toDouble(),
-        sellingPrice: (map['selling_price'] as num).toDouble(),
-        purchasePrice: (map['purchase_price'] as num).toDouble(),
-        gst: (map['gst'] as num).toDouble(),
+        mrp: (map['mrp'] ?? 0).toDouble(),
+        sellingPrice: (map['selling_price'] ?? 0).toDouble(),
+        purchasePrice: (map['purchase_price'] ?? map['purchase_rate'] ?? 0).toDouble(),
+        gst: (map['gst'] ?? 0).toDouble(),
         barcode: map['barcode'],
-        stock: map['stock'],
-        lowStockThreshold: map['low_stock_threshold'] ?? 5,
-        imagePath: map['image_path'],
+        stock: map['stock'] ?? map['quantity'] ?? 0,
+        lowStockThreshold: map['low_stock_threshold'] ?? map['low_stock_limit'] ?? 5,
+        imagePath: map['image_path'] ?? map['image_url'],
+        unit: map['unit'] ?? 'PCS',
       );
 
   Product copyWith({
@@ -81,6 +85,7 @@ class Product {
     int? stock,
     int? lowStockThreshold,
     String? imagePath,
+    String? unit,
   }) =>
       Product(
         id: id ?? this.id,
@@ -97,6 +102,7 @@ class Product {
         stock: stock ?? this.stock,
         lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
         imagePath: imagePath ?? this.imagePath,
+        unit: unit ?? this.unit,
       );
 
   bool get isLowStock => stock <= lowStockThreshold;
