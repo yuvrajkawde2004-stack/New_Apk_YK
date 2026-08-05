@@ -60,7 +60,7 @@ class _InventoryScreenState extends State<InventoryScreen>
   // Calculate totals
   int get _totalStockCount => _products.fold<int>(0, (sum, item) => sum + ((item['quantity'] as int?) ?? 0));
   double get _totalStockValue => _products.fold<double>(0.0, (sum, item) => sum + (((item['quantity'] as int?) ?? 0) * ((item['purchase_rate'] as num?)?.toDouble() ?? 0.0)));
-  int get _lowStockCount => _products.where((p) => ((p['quantity'] as int?) ?? 0) <= ((p['low_stock_limit'] as int?) ?? 5)).length;
+  int get _lowStockCount => _products.where((p) => ((p['id'] as int?) ?? 1) != 0 && ((p['quantity'] as int?) ?? 0) <= ((p['low_stock_limit'] as int?) ?? 5)).length;
   double get _totalSupplierDues => _suppliers.fold<double>(0.0, (sum, s) => sum + ((s['outstanding_due'] as num?)?.toDouble() ?? 0.0));
 
   @override
@@ -244,7 +244,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                     final item = filtered[i];
                     final qty = (item['quantity'] as int?) ?? 0;
                     final limit = (item['low_stock_limit'] as int?) ?? 5;
-                    final isLow = qty <= limit;
+                    final isLow = qty <= limit && ((item['id'] as int?) ?? 1) != 0;
                     final rate = (item['purchase_rate'] as num?)?.toDouble() ?? 0.0;
 
                     return Container(

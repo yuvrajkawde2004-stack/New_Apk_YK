@@ -1132,7 +1132,7 @@ class DatabaseHelper {
     final result = await db.rawQuery('''
     SELECT COUNT(*) AS total
     FROM products
-    WHERE quantity <= low_stock_limit
+    WHERE quantity <= low_stock_limit AND id != 0
   ''');
 
     return (result.first['total'] as int?) ?? 0;
@@ -1233,7 +1233,7 @@ class DatabaseHelper {
     final db = await database;
     return await db.rawQuery('''
       SELECT * FROM products
-      WHERE quantity <= low_stock_limit
+      WHERE quantity <= low_stock_limit AND id != 0
       ORDER BY quantity ASC
       LIMIT 5
     ''');
