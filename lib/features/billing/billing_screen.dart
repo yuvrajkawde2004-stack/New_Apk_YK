@@ -602,7 +602,34 @@ class _BillingScreenState extends State<BillingScreen> {
             Text('Scan to Pay', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text('₹$amount', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.primaryBlue)),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Colors.red, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'WAITING FOR PAYMENT...',
+                    style: GoogleFonts.outfit(
+                      color: Colors.red.shade700,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+             .scaleXY(begin: 1.0, end: 1.05, duration: 800.ms, curve: Curves.easeInOut)
+             .tint(color: Colors.redAccent, duration: 800.ms, end: 0.2),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
