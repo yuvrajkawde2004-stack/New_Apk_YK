@@ -976,12 +976,14 @@ class DatabaseHelper {
 
   Future<int> updateBill(int id, Map<String, dynamic> data) async {
     final db = await database;
-    return await db.update(
+    int count = await db.update(
       'bills',
       data,
       where: 'id = ?',
       whereArgs: [id],
     );
+    await _logSyncAction(db, 'bills', 'UPDATE', id.toString(), data);
+    return count;
   }
 
   Future<String> generateBillNumber() async {
