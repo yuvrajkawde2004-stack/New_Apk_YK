@@ -6,7 +6,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/services/cloudflare_api_service.dart';
 
 class OtpLoginScreen extends StatefulWidget {
   const OtpLoginScreen({super.key});
@@ -79,42 +78,26 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
 
     setState(() => _isLoading = true);
 
-    if (email.contains('@')) {
-      final result = await CloudflareApiService.verifyOtp(target: email, code: password);
+    if (_verificationId == null) {
       setState(() => _isLoading = false);
-
-      if (result['success'] == true) {
-        _onLoginSuccess(email);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Login failed. Please check your OTP or Password.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } else {
-      if (_verificationId == null) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please request OTP first.'), backgroundColor: Colors.orangeAccent),
-        );
-        return;
-      }
-      try {
-        PhoneAuthCredential credential = PhoneAuthProvider.credential(
-          verificationId: _verificationId!,
-          smsCode: password,
-        );
-        await FirebaseAuth.instance.signInWithCredential(credential);
-        setState(() => _isLoading = false);
-        _onLoginSuccess(email);
-      } catch (e) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid OTP or verification failed.'), backgroundColor: Colors.redAccent),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please request OTP first.'), backgroundColor: Colors.orangeAccent),
+      );
+      return;
+    }
+    try {
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: password,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      setState(() => _isLoading = false);
+      _onLoginSuccess(email);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid OTP or verification failed.'), backgroundColor: Colors.redAccent),
+      );
     }
   }
 
@@ -178,74 +161,41 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
 
     setState(() => _isLoading = true);
 
-    if (target.contains('@')) {
-      final type = 'gmail';
-      final result = await CloudflareApiService.sendOtp(target: target, type: type);
-      setState(() => _isLoading = false);
-
-      if (result['success'] == true) {
-        setState(() {
-          _otpTimer = 30; 
-        });
-        _startTimer();
-
-        if (result['debug_otp'] != null) {
-          _passwordController.text = result['debug_otp'].toString();
-        }
-
-        final debugOtp = result['debug_otp'] != null ? '\n(Auto-filled OTP: ${result['debug_otp']})' : '';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${result['message']}$debugOtp'),
-            backgroundColor: AppColors.emeraldGreen,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Failed to send OTP'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } else {
-      // Firebase Phone Auth
-      try {
-        final phoneNumber = target.startsWith('+') ? target : '+91$target';
-        await FirebaseAuth.instance.verifyPhoneNumber(
-          phoneNumber: phoneNumber,
-          verificationCompleted: (PhoneAuthCredential credential) async {
-            await FirebaseAuth.instance.signInWithCredential(credential);
-            _onLoginSuccess(target);
-          },
-          verificationFailed: (FirebaseAuthException e) {
-            setState(() => _isLoading = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(e.message ?? 'Verification failed'), backgroundColor: Colors.redAccent),
-            );
-          },
-          codeSent: (String verificationId, int? resendToken) {
-            setState(() {
-              _isLoading = false;
-              _verificationId = verificationId;
-              _otpTimer = 30;
-            });
-            _startTimer();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('OTP Sent successfully!'), backgroundColor: AppColors.emeraldGreen),
-            );
-          },
-          codeAutoRetrievalTimeout: (String verificationId) {
+    // Firebase Phone Auth
+    try {
+      final phoneNumber = target.startsWith('+') ? target : '+91$target';
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await FirebaseAuth.instance.signInWithCredential(credential);
+          _onLoginSuccess(target);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message ?? 'Verification failed'), backgroundColor: Colors.redAccent),
+          );
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          setState(() {
+            _isLoading = false;
             _verificationId = verificationId;
-          },
-        );
-      } catch (e) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
-        );
-      }
+            _otpTimer = 30;
+          });
+          _startTimer();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('OTP Sent successfully!'), backgroundColor: AppColors.emeraldGreen),
+          );
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          _verificationId = verificationId;
+        },
+      );
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+      );
     }
   }
 
