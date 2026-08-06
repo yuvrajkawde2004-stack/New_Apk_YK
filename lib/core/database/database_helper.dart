@@ -529,6 +529,7 @@ class DatabaseHelper {
 
     return await db.query(
       'products',
+      where: 'id != 0',
       orderBy: 'product_name ASC',
       limit: limit,
       offset: offset,
@@ -590,9 +591,11 @@ class DatabaseHelper {
     return await db.query(
       'products',
       where: '''
-      product_name LIKE ?
-      OR category LIKE ?
-      OR supplier_name LIKE ?
+      id != 0 AND (
+        product_name LIKE ?
+        OR category LIKE ?
+        OR supplier_name LIKE ?
+      )
     ''',
       whereArgs: [
         '%$keyword%',

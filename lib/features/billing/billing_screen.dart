@@ -409,9 +409,9 @@ class _BillingScreenState extends State<BillingScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final settings = await DatabaseHelper.instance.getShopSettings();
-      final upiId = settings?['upi_id'] ?? '';
-      final upiName = settings?['upi_name'] ?? '';
+      final prefs = await SharedPreferences.getInstance();
+      final upiId = prefs.getString('upi_id') ?? '';
+      final upiName = prefs.getString('upi_name') ?? '';
 
       if (_paymentMethod == 'UPI' && upiId.isEmpty) {
         if (mounted) {
@@ -422,8 +422,6 @@ class _BillingScreenState extends State<BillingScreen> {
         }
         return;
       }
-
-      final prefs = await SharedPreferences.getInstance();
       final isEdit = widget.billToEdit != null;
       final billNo = isEdit ? widget.billToEdit!['bill_number'] : await DatabaseHelper.instance.generateBillNumber();
       final nowStr = DateTime.now().toIso8601String();

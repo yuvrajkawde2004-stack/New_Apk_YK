@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../../core/database/database_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 
 class UPISettingsScreen extends StatefulWidget {
@@ -26,12 +26,10 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final settings = await DatabaseHelper.instance.getShopSettings();
-    if (settings != null) {
-      _upiIdController.text = settings['upi_id'] ?? '';
-      _upiNameController.text = settings['upi_name'] ?? '';
-      _updateQrPreview();
-    }
+    final prefs = await SharedPreferences.getInstance();
+    _upiIdController.text = prefs.getString('upi_id') ?? '';
+    _upiNameController.text = prefs.getString('upi_name') ?? '';
+    _updateQrPreview();
     setState(() => _isLoading = false);
   }
 
@@ -50,12 +48,9 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
   Future<void> _saveSettings() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final settings = await DatabaseHelper.instance.getShopSettings() ?? {};
-    
-    settings['upi_id'] = _upiIdController.text.trim();
-    settings['upi_name'] = _upiNameController.text.trim();
-    
-    await DatabaseHelper.instance.saveShopSettings(settings);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('upi_id', _upiIdController.text.trim());
+    await prefs.setString('upi_name', _upiNameController.text.trim());
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

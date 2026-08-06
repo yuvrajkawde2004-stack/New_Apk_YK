@@ -18,7 +18,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
   final _mrpController = TextEditingController();
-  final _sellingController = TextEditingController();
   final _purchaseController = TextEditingController();
   final _stockController = TextEditingController();
   final _barcodeController = TextEditingController();
@@ -62,7 +61,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _nameController.dispose();
     _brandController.dispose();
     _mrpController.dispose();
-    _sellingController.dispose();
     _purchaseController.dispose();
     _stockController.dispose();
     _barcodeController.dispose();
@@ -227,9 +225,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _field(
-                          controller: _sellingController,
-                          label: 'Selling ₹',
-                          icon: Icons.sell_rounded,
+                          controller: _purchaseController,
+                          label: 'Purchase ₹',
+                          icon: Icons.shopping_bag_rounded,
                           keyboardType: TextInputType.number),
                     ),
                   ],
@@ -238,20 +236,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _field(
-                          controller: _purchaseController,
-                          label: 'Purchase ₹',
-                          icon: Icons.shopping_bag_rounded,
-                          keyboardType: TextInputType.number),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
                       child: _dropdown(
                           label: 'GST Rate',
                           value: _selectedGst,
                           items: _gstRates,
                           onChanged: (v) => setState(() => _selectedGst = v)),
                     ),
+                    const SizedBox(width: 12),
+                    const Spacer(),
                   ],
                 ),
               ], 200),
