@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/cloudflare_api_service.dart';
@@ -24,6 +26,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
   bool _isLoading = false;
   int _otpTimer = 0;
   Timer? _timer;
+  String? _verificationId;
 
   @override
   void dispose() {
@@ -32,6 +35,22 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     _passwordController.dispose();
     _timer?.cancel();
     super.dispose();
+  }
+
+  void _onLoginSuccess(String email) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isSignUpMode ? 'Account created successfully!' : 'Login Successful! Welcome back.'),
+        backgroundColor: AppColors.emeraldGreen,
+      ),
+    );
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_logged_in', true);
+    await prefs.setString('user_id', email);
+    
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/dashboard');
   }
 
   Future<void> _handleLoginOrSignUp() async {
@@ -59,129 +78,90 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     }
 
     setState(() => _isLoading = true);
-    final result = await CloudflareApiService.verifyOtp(target: email, code: password);
-    setState(() => _isLoading = false);
 
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isSignUpMode ? 'Account created successfully!' : 'Login Successful! Welcome back.'),
-          backgroundColor: AppColors.emeraldGreen,
-        ),
-      );
-      
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_logged_in', true);
-      await prefs.setString('user_id', email);
-      
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/dashboard');
+    if (email.contains('@')) {
+      final result = await CloudflareApiService.verifyOtp(target: email, code: password);
+      setState(() => _isLoading = false);
+
+      if (result['success'] == true) {
+        _onLoginSuccess(email);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Login failed. Please check your OTP or Password.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } else {
+      if (_verificationId == null) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please request OTP first.'), backgroundColor: Colors.orangeAccent),
+        );
+        return;
+      }
+      try {
+        PhoneAuthCredential credential = PhoneAuthProvider.credential(
+          verificationId: _verificationId!,
+          smsCode: password,
+        );
+        await FirebaseAuth.instance.signInWithCredential(credential);
+        setState(() => _isLoading = false);
+        _onLoginSuccess(email);
+      } catch (e) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid OTP or verification failed.'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+
+      if (account != null) {
+        final email = account.email;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Login Successful! Welcome back.'),
+            backgroundColor: AppColors.emeraldGreen,
+          ),
+        );
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_id', email);
+
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Login failed. Please check your OTP or Password.'),
+          content: Text('Google Sign-In Failed: $error\nEnsure SHA-1 is added in Firebase/Cloud Console.'),
           backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    final googleAccounts = [
-      'user.retailflow@gmail.com',
-      'shopowner.pos@gmail.com',
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final emailInputCtrl = TextEditingController();
-        return Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.g_mobiledata_rounded, color: Color(0xFFEA4335), size: 36),
-                  const SizedBox(width: 8),
-                  Text('Choose Google Account', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text('Select an account to login to your app:', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13)),
-              const SizedBox(height: 16),
-
-              ...googleAccounts.map((acc) => ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFFEA4335).withValues(alpha: 0.1),
-                  child: Text(acc[0].toUpperCase(), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFFEA4335))),
-                ),
-                title: Text(acc, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text('Google Account', style: GoogleFonts.outfit(fontSize: 11)),
-                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  _emailController.text = acc;
-                  await _sendOtp();
-                },
-              )),
-              
-              const Divider(),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.grey,
-                  child: Icon(Icons.add, color: Colors.white),
-                ),
-                title: Text('Use another Google Email', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (dCtx) => AlertDialog(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: Text('Enter Gmail Address', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                      content: TextField(
-                        controller: emailInputCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(hintText: 'example@gmail.com', border: OutlineInputBorder()),
-                      ),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancel')),
-                        ElevatedButton(
-                          onPressed: () async {
-                            final email = emailInputCtrl.text.trim();
-                            if (email.isNotEmpty) {
-                              Navigator.pop(dCtx);
-                              Navigator.pop(ctx);
-                              _emailController.text = email;
-                              await _sendOtp();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-                          child: const Text('Send Gmail OTP', style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_otpTimer > 0) {
+          _otpTimer--;
+        } else {
+          _timer?.cancel();
+        }
+      });
+    });
   }
 
   Future<void> _sendOtp() async {
@@ -197,36 +177,75 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     }
 
     setState(() => _isLoading = true);
-    final type = target.contains('@') ? 'gmail' : 'mobile';
-    final result = await CloudflareApiService.sendOtp(target: target, type: type);
-    setState(() => _isLoading = false);
 
-    if (result['success'] == true) {
-      setState(() {
-        _otpTimer = 0; // Removed wait timer for instant resend
-      });
-      _timer?.cancel();
+    if (target.contains('@')) {
+      final type = 'gmail';
+      final result = await CloudflareApiService.sendOtp(target: target, type: type);
+      setState(() => _isLoading = false);
 
-      // Auto-fill OTP for easier testing since SMS might not arrive
-      if (result['debug_otp'] != null) {
-        _passwordController.text = result['debug_otp'].toString();
+      if (result['success'] == true) {
+        setState(() {
+          _otpTimer = 30; 
+        });
+        _startTimer();
+
+        if (result['debug_otp'] != null) {
+          _passwordController.text = result['debug_otp'].toString();
+        }
+
+        final debugOtp = result['debug_otp'] != null ? '\n(Auto-filled OTP: ${result['debug_otp']})' : '';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${result['message']}$debugOtp'),
+            backgroundColor: AppColors.emeraldGreen,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to send OTP'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
-
-      final debugOtp = result['debug_otp'] != null ? '\n(Auto-filled OTP: ${result['debug_otp']})' : '';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${result['message']}$debugOtp'),
-          backgroundColor: AppColors.emeraldGreen,
-          duration: const Duration(seconds: 5),
-        ),
-      );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Failed to send OTP'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      // Firebase Phone Auth
+      try {
+        final phoneNumber = target.startsWith('+') ? target : '+91$target';
+        await FirebaseAuth.instance.verifyPhoneNumber(
+          phoneNumber: phoneNumber,
+          verificationCompleted: (PhoneAuthCredential credential) async {
+            await FirebaseAuth.instance.signInWithCredential(credential);
+            _onLoginSuccess(target);
+          },
+          verificationFailed: (FirebaseAuthException e) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(e.message ?? 'Verification failed'), backgroundColor: Colors.redAccent),
+            );
+          },
+          codeSent: (String verificationId, int? resendToken) {
+            setState(() {
+              _isLoading = false;
+              _verificationId = verificationId;
+              _otpTimer = 30;
+            });
+            _startTimer();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('OTP Sent successfully!'), backgroundColor: AppColors.emeraldGreen),
+            );
+          },
+          codeAutoRetrievalTimeout: (String verificationId) {
+            _verificationId = verificationId;
+          },
+        );
+      } catch (e) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
     }
   }
 

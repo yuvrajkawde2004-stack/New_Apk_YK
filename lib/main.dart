@@ -16,8 +16,15 @@ import 'core/services/sync_service.dart';
 
 import 'package:flutter/foundation.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint("Firebase init error: $e");
+  }
 
   // Enable SQLite FFI for Desktop (Windows, Linux, macOS)
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {

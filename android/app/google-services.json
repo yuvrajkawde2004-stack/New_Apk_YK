@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "367122213346",
+    "project_id": "retalflow1",
+    "storage_bucket": "retalflow1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:367122213346:android:355c8a6aae38404208f1bb",
+        "android_client_info": {
+          "package_name": "com.example.new_apk_yk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxc16hunXKfWTNCcOrrNXxRlOsEcphmvY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
