@@ -10,6 +10,7 @@ import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/product.dart';
@@ -408,6 +409,20 @@ class _BillingScreenState extends State<BillingScreen> {
     setState(() => _isProcessing = true);
 
     try {
+      final settings = await DatabaseHelper.instance.getShopSettings();
+      final upiId = settings?['upi_id'] ?? '';
+      final upiName = settings?['upi_name'] ?? '';
+
+      if (_paymentMethod == 'UPI' && upiId.isEmpty) {
+        if (mounted) {
+          setState(() => _isProcessing = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please set up your UPI ID in Settings first.', style: GoogleFonts.outfit()), backgroundColor: Colors.redAccent),
+          );
+        }
+        return;
+      }
+
       final prefs = await SharedPreferences.getInstance();
       final isEdit = widget.billToEdit != null;
       final billNo = isEdit ? widget.billToEdit!['bill_number'] : await DatabaseHelper.instance.generateBillNumber();
@@ -465,7 +480,12 @@ class _BillingScreenState extends State<BillingScreen> {
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
       setState(() => _isProcessing = false);
-      _showBillSuccessfulAnimationAndNavigate(billData);
+      
+      if (_paymentMethod == 'UPI') {
+        _showUpiDialog(billData, upiId, upiName);
+      } else {
+        _showBillSuccessfulAnimationAndNavigate(billData);
+      }
       
     } catch (e) {
       debugPrint('Bill save error: $e');
@@ -557,6 +577,88 @@ class _BillingScreenState extends State<BillingScreen> {
         );
       }
     });
+  }
+
+  void _showUpiDialog(Map<String, dynamic> billData, String upiId, String upiName) {
+    final amount = billData['grand_total'];
+    final billNo = billData['bill_number'];
+    final qrData = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(upiName)}&am=$amount&cu=INR&tn=$billNo';
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Scan to Pay', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('₹$amount', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.primaryBlue)),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
+              ),
+              child: QrImageView(
+                data: qrData,
+                version: QrVersions.auto,
+                size: 200.0,
+                backgroundColor: Colors.white,
+                eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.primaryBlue),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Paying to $upiName', style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade600)),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  
+                  // Mark as paid in DB
+                  final billIdResult = await DatabaseHelper.instance.database.then((db) => db.query('bills', where: 'bill_number = ?', whereArgs: [billNo]));
+                  if (billIdResult.isNotEmpty) {
+                    final billId = billIdResult.first['id'] as int;
+                    await DatabaseHelper.instance.updateBill(billId, {
+                      'payment_status': 'Paid',
+                      'paid_at': DateTime.now().toIso8601String(),
+                    });
+                  }
+                  
+                  _showBillSuccessfulAnimationAndNavigate(billData);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emeraldGreen,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text('Payment Done', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _showBillSuccessfulAnimationAndNavigate(billData);
+              },
+              child: Text('Skip (Mark as Pending)', style: GoogleFonts.outfit(color: Colors.grey.shade600)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showInvoicePreviewDialog(Map<String, dynamic> billData, List<Map<String, dynamic>> itemsData) {

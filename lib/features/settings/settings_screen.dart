@@ -10,6 +10,7 @@ import '../dashboard/providers/dashboard_provider.dart';
 import 'shop_profile_modal.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/services/cloudflare_api_service.dart';
+import 'upi_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -150,6 +151,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'Printer Management',
                   subtitle: 'Thermal 80mm POS & PDF A4 Printer',
                   onTap: () => _showPrinterConnectionDialog(context),
+                ),
+                _divider(),
+                _settingTile(
+                  icon: Icons.qr_code_scanner_rounded,
+                  color: AppColors.primaryBlue,
+                  title: 'Free UPI & Payments',
+                  subtitle: 'Setup UPI ID for Dynamic QR Codes',
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const UPISettingsScreen()));
+                  },
                 ),
               ]),
 

@@ -40,7 +40,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 14,
+      version: 15,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -204,6 +204,15 @@ class DatabaseHelper {
         } catch (_) {}
       }
     }
+
+    if (oldVersion < 15) {
+      try { await db.execute("ALTER TABLE shop_settings ADD COLUMN upi_id TEXT"); } catch (_) {}
+      try { await db.execute("ALTER TABLE shop_settings ADD COLUMN upi_name TEXT"); } catch (_) {}
+      try { await db.execute("ALTER TABLE bills ADD COLUMN payment_status TEXT DEFAULT 'Pending'"); } catch (_) {}
+      try { await db.execute("ALTER TABLE bills ADD COLUMN payment_upi_id TEXT"); } catch (_) {}
+      try { await db.execute("ALTER TABLE bills ADD COLUMN payment_reference TEXT"); } catch (_) {}
+      try { await db.execute("ALTER TABLE bills ADD COLUMN paid_at TEXT"); } catch (_) {}
+    }
   }
 
   // ==========================
@@ -273,6 +282,10 @@ class DatabaseHelper {
         paid_amount REAL DEFAULT 0,
         due_amount REAL DEFAULT 0,
         payment_method TEXT NOT NULL,
+        payment_status TEXT DEFAULT 'Pending',
+        payment_upi_id TEXT,
+        payment_reference TEXT,
+        paid_at TEXT,
         bill_date TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
@@ -320,6 +333,8 @@ class DatabaseHelper {
         address TEXT,
         mobile TEXT,
         gst_number TEXT,
+        upi_id TEXT,
+        upi_name TEXT,
         footer TEXT,
         currency TEXT DEFAULT '₹'
       )
