@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -18,14 +19,18 @@ class DatabaseHelper {
 
   Future<void> wipeEntireDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'shop_database.db');
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id')?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'default';
+    final path = join(dbPath, 'shop_database_$userId.db');
     await closeAndReset();
     await deleteDatabase(path);
   }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('shop_database.db');
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id')?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'default';
+    _database = await _initDB('shop_database_$userId.db');
     return _database!;
   }
 

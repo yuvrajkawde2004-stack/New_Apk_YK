@@ -220,6 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setBool('is_logged_in', false);
+                    await DatabaseHelper.instance.closeAndReset();
                     if (context.mounted) {
                       Navigator.pushReplacementNamed(context, '/login');
                     }
