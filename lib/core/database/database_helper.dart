@@ -1472,12 +1472,23 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getPurchasesBySupplier(String supplierName) async {
     final db = await database;
-    return await db.query('purchases', where: 'supplier_name = ?', whereArgs: [supplierName], orderBy: 'id DESC');
+    return await db.rawQuery('''
+      SELECT p.*, pr.unit 
+      FROM purchases p 
+      LEFT JOIN products pr ON p.product_name = pr.product_name 
+      WHERE p.supplier_name = ? 
+      ORDER BY p.id DESC
+    ''', [supplierName]);
   }
 
   Future<List<Map<String, dynamic>>> getAllPurchases() async {
     final db = await database;
-    return await db.query('purchases', orderBy: 'id DESC');
+    return await db.rawQuery('''
+      SELECT p.*, pr.unit 
+      FROM purchases p 
+      LEFT JOIN products pr ON p.product_name = pr.product_name 
+      ORDER BY p.id DESC
+    ''');
   }
 
   Future<int> recordSupplierPayment({

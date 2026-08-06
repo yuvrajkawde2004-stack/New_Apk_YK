@@ -380,7 +380,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                               children: [
                                 Text(pur['product_name'] ?? 'Stock Item', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
                                 Text('Supplier: ${pur['supplier_name'] ?? 'N/A'} • $dateStr', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade600)),
-                                Text('Qty: ${pur['quantity']} @ ₹${pur['purchase_rate']}', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade800)),
+                                Text('Qty: ${pur['quantity']} ${pur['unit'] ?? 'PCS'} @ ₹${pur['purchase_rate']}', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade800)),
                               ],
                             ),
                           ),
@@ -967,7 +967,7 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(p['product_name'] ?? 'Stock Item', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
-                                                Text('Qty: ${p['quantity']} @ ₹${p['purchase_rate']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                                                Text('Qty: ${p['quantity']} ${p['unit'] ?? 'PCS'} @ ₹${p['purchase_rate']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
                                               ],
                                             ),
                                           ),
