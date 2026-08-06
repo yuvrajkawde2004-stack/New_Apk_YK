@@ -155,7 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _divider(),
                 _settingTile(
                   icon: Icons.qr_code_scanner_rounded,
-                  color: AppColors.primaryBlue,
+                  color: AppColors.royalBlue,
                   title: 'Free UPI & Payments',
                   subtitle: 'Setup UPI ID for Dynamic QR Codes',
                   onTap: () {

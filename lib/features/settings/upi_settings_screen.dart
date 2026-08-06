@@ -97,7 +97,7 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
                 decoration: InputDecoration(
                   labelText: 'UPI ID / VPA',
                   hintText: 'e.g. 9876543210@ybl',
-                  prefixIcon: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primaryBlue),
+                  prefixIcon: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.royalBlue),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 validator: (val) {
@@ -115,7 +115,7 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
                 decoration: InputDecoration(
                   labelText: 'Display Name (Payee Name)',
                   hintText: 'e.g. ABC Supermart',
-                  prefixIcon: const Icon(Icons.storefront_rounded, color: AppColors.primaryBlue),
+                  prefixIcon: const Icon(Icons.storefront_rounded, color: AppColors.royalBlue),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -128,7 +128,7 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
                 child: ElevatedButton(
                   onPressed: _saveSettings,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
+                    backgroundColor: AppColors.royalBlue,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
@@ -156,7 +156,7 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
                           version: QrVersions.auto,
                           size: 200.0,
                           backgroundColor: Colors.white,
-                          eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.primaryBlue),
+                          eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.royalBlue),
                         ),
                       ),
                       const SizedBox(height: 16),

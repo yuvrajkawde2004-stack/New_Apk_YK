@@ -601,7 +601,7 @@ class _BillingScreenState extends State<BillingScreen> {
           children: [
             Text('Scan to Pay', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('₹$amount', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.primaryBlue)),
+            Text('₹$amount', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -642,7 +642,7 @@ class _BillingScreenState extends State<BillingScreen> {
                 version: QrVersions.auto,
                 size: 200.0,
                 backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.primaryBlue),
+                eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.royalBlue),
               ),
             ),
             const SizedBox(height: 16),
