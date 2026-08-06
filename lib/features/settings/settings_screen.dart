@@ -229,11 +229,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'Sign Out Account',
                   subtitle: 'Safely logout from this phone',
                   onTap: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setBool('is_logged_in', false);
-                    await DatabaseHelper.instance.closeAndReset();
-                    if (context.mounted) {
-                      Navigator.pushReplacementNamed(context, '/login');
+                    bool confirm = await showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Sign Out', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        content: Text('Do you want to exit the app?', style: GoogleFonts.outfit()),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey.shade700)),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            child: Text('OK', style: GoogleFonts.outfit(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ) ?? false;
+
+                    if (confirm) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('is_logged_in', false);
+                      await DatabaseHelper.instance.closeAndReset();
+                      if (context.mounted) {
+                        Navigator.pushReplacementNamed(context, '/login');
+                      }
                     }
                   },
                 ),
