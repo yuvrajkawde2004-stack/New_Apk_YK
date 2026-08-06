@@ -134,6 +134,7 @@ class _BillingScreenState extends State<BillingScreen> {
         lowStockThreshold: json['low_stock_limit'] ?? 5,
         brand: json['supplier_name'] ?? '',
         gst: 0, // Default to 0 unless added to DB later
+        unit: json['unit'] ?? 'PCS',
       );
     }).toList();
     if (mounted) {

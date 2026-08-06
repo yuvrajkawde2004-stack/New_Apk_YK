@@ -46,6 +46,7 @@ class _ProductListScreenState extends State<ProductListScreen>
         stock: json['quantity'] ?? 0,
         lowStockThreshold: json['low_stock_limit'] ?? 5,
         brand: json['supplier_name'] ?? '',
+        unit: json['unit'] ?? 'PCS',
       );
     }).toList();
     
