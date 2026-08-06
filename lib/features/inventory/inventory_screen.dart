@@ -1272,6 +1272,8 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
   final _noteCtrl = TextEditingController();
   String? _selectedSupplierName;
   bool _saving = false;
+  String _selectedUnit = 'PCS';
+  final List<String> _units = ['PCS', 'PAIR', 'KG', 'G', 'MTR', 'ROLL', 'BOX', 'PACK', 'SET', 'DOZ', 'LTR', 'ML'];
 
   @override
   void initState() {
@@ -1351,9 +1353,19 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
 
             Row(
               children: [
-                Expanded(child: TextField(controller: _rateCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Buy Price (₹)', prefixText: '₹ ', border: OutlineInputBorder()))),
-                const SizedBox(width: 10),
-                Expanded(child: TextField(controller: _qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity (Pcs)', border: OutlineInputBorder()))),
+                Expanded(flex: 2, child: TextField(controller: _rateCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Buy Price (₹)', prefixText: '₹ ', border: OutlineInputBorder()))),
+                const SizedBox(width: 8),
+                Expanded(flex: 1, child: TextField(controller: _qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Qty', border: OutlineInputBorder()))),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedUnit,
+                    decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
+                    items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                    onChanged: (val) => setState(() => _selectedUnit = val ?? 'PCS'),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -1408,6 +1420,7 @@ class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
         paidAmount: paid,
         supplierPhone: phoneVal,
         notes: _noteCtrl.text.trim(),
+        unit: _selectedUnit,
       );
 
       if (mounted) {
