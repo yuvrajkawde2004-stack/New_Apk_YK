@@ -632,7 +632,9 @@ class _HomeTab extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ).animate().scaleXY(begin: 0.98, end: 1.0, duration: 300.ms),
+                    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                     .scaleXY(begin: 1.0, end: 1.15, duration: 500.ms, curve: Curves.easeInOut)
+                     .shimmer(duration: 1000.ms, color: Colors.white, blendMode: BlendMode.srcOver),
                 ],
               ),
               Column(
