@@ -588,99 +588,218 @@ class _BillingScreenState extends State<BillingScreen> {
       backgroundColor: Colors.transparent,
       isDismissible: false,
       enableDrag: false,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Scan to Pay', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('₹$amount', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.shade200),
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.royalBlue.withOpacity(0.15),
+                blurRadius: 40,
+                offset: const Offset(0, -10),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Handle
+              Container(
+                width: 48,
+                height: 5,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: Colors.red, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'WAITING FOR PAYMENT...',
-                    style: GoogleFonts.outfit(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12,
-                      letterSpacing: 1,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.royalBlue.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.royalBlue, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Scan to Pay', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Amount with gradient
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [AppColors.royalBlue, Color(0xFF6366F1)], // royalBlue to indigo
+                ).createShader(bounds),
+                child: Text('₹${amount.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white)),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // QR Code Container with Scanner Animation
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer Glow / Border
+                  Container(
+                    width: 240,
+                    height: 240,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(color: AppColors.royalBlue.withOpacity(0.15), blurRadius: 30, spreadRadius: 5),
+                        BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.1), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 10)),
+                      ],
+                      border: Border.all(color: AppColors.royalBlue.withOpacity(0.1), width: 2),
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: QrImageView(
+                      data: qrData,
+                      version: QrVersions.auto,
+                      backgroundColor: Colors.white,
+                      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
+                      dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.circle, color: Color(0xFF1E293B)),
+                    ),
+                  ),
+                  // Scanner Laser Animation
+                  Positioned(
+                    top: 20,
+                    child: Container(
+                      width: 200,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: AppColors.emeraldGreen,
+                        boxShadow: [
+                          BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.6), blurRadius: 10, spreadRadius: 3),
+                        ],
+                      ),
+                    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                     .moveY(begin: 0, end: 200, duration: 2000.ms, curve: Curves.easeInOutSine),
+                  ),
+                ],
+              ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+              
+              const SizedBox(height: 24),
+              
+              // Paying To text
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.storefront_rounded, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Text('Paying to ', style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade600)),
+                    Flexible(
+                      child: Text(upiName, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)), overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Waiting badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.emeraldGreen),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'WAITING FOR PAYMENT...',
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFF166534),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+               .fadeIn(duration: 800.ms).fadeOut(delay: 800.ms, duration: 800.ms),
+              
+              const SizedBox(height: 32),
+              
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _showBillSuccessfulAnimationAndNavigate(billData);
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: Text('Skip', style: GoogleFonts.outfit(color: Colors.grey.shade500, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 8)),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          final billIdResult = await DatabaseHelper.instance.database.then((db) => db.query('bills', where: 'bill_number = ?', whereArgs: [billNo]));
+                          if (billIdResult.isNotEmpty) {
+                            final billId = billIdResult.first['id'] as int;
+                            await DatabaseHelper.instance.updateBill(billId, {
+                              'payment_status': 'Paid',
+                              'paid_at': DateTime.now().toIso8601String(),
+                            });
+                          }
+                          _showBillSuccessfulAnimationAndNavigate(billData);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.emeraldGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text('Payment Done', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-             .scaleXY(begin: 1.0, end: 1.05, duration: 800.ms, curve: Curves.easeInOut)
-             .tint(color: Colors.redAccent, duration: 800.ms, end: 0.2),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
-              ),
-              child: QrImageView(
-                data: qrData,
-                version: QrVersions.auto,
-                size: 200.0,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppColors.royalBlue),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Paying to $upiName', style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade600)),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  
-                  // Mark as paid in DB
-                  final billIdResult = await DatabaseHelper.instance.database.then((db) => db.query('bills', where: 'bill_number = ?', whereArgs: [billNo]));
-                  if (billIdResult.isNotEmpty) {
-                    final billId = billIdResult.first['id'] as int;
-                    await DatabaseHelper.instance.updateBill(billId, {
-                      'payment_status': 'Paid',
-                      'paid_at': DateTime.now().toIso8601String(),
-                    });
-                  }
-                  
-                  _showBillSuccessfulAnimationAndNavigate(billData);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.emeraldGreen,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text('Payment Done', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _showBillSuccessfulAnimationAndNavigate(billData);
-              },
-              child: Text('Skip (Mark as Pending)', style: GoogleFonts.outfit(color: Colors.grey.shade600)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

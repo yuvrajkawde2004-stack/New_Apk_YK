@@ -70,9 +70,11 @@ syncApp.post('/', async (c) => {
          
          if (data.items && Array.isArray(data.items)) {
            for (const item of data.items) {
+             const itemPrice = item.selling_price ?? item.price ?? 0;
+             const productId = item.product_id?.toString() || "0";
              queries.push(c.env.DB.prepare(
                `INSERT INTO bill_items (item_id, bill_id, product_id, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)`
-             ).bind(crypto.randomUUID(), recordId, item.product_id, item.quantity, item.price, item.total));
+             ).bind(crypto.randomUUID(), recordId, productId, item.quantity || 1, itemPrice, item.total || 0));
            }
          }
        }

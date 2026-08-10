@@ -69,24 +69,27 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      (billData['shop_name'] ?? 'RETAILFLOW POS').toString().toUpperCase(),
-                      style: GoogleFonts.cinzel(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (billData['shop_name'] ?? 'RETAILFLOW POS').toString().toUpperCase(),
+                        style: GoogleFonts.cinzel(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
                       ),
-                    ),
-                    Text(
-                      billData['shop_address'] ?? 'Boutique Receipt',
-                      style: GoogleFonts.outfit(color: Colors.white70, fontSize: 10),
-                    ),
-                  ],
+                      Text(
+                        billData['shop_address'] ?? '',
+                        style: GoogleFonts.outfit(color: Colors.white70, fontSize: 10),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -94,7 +97,7 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'GOLD',
+                    'INVOICE',
                     style: GoogleFonts.outfit(color: goldAccent, fontSize: 10, fontWeight: FontWeight.w900),
                   ),
                 ),
@@ -114,14 +117,17 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Customer: $customerName', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
-                    if (customerMobile.isNotEmpty)
-                      Text(customerMobile, style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Customer: $customerName', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
+                      if (customerMobile.isNotEmpty)
+                        Text(customerMobile, style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey.shade700)),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -144,10 +150,10 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('ITEM', style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+                Expanded(flex: 4, child: Text('ITEM', style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
                 Expanded(flex: 1, child: Text('QTY', textAlign: TextAlign.center, style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('RATE', textAlign: TextAlign.right, style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('AMOUNT', textAlign: TextAlign.right, style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.only(right: 8), child: Text('RATE', textAlign: TextAlign.right, style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
+                Expanded(flex: 2, child: Text('AMOUNT', textAlign: TextAlign.right, style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
               ],
             ),
           ),
@@ -165,10 +171,10 @@ class InvoiceTemplatePremiumGold extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               child: Row(
                 children: [
-                  Expanded(flex: 3, child: Text(name, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: textColor))),
+                  Expanded(flex: 4, child: Text(name, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: textColor))),
                   Expanded(flex: 1, child: Text('$qty', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12, color: textColor))),
-                  Expanded(flex: 1, child: Text('₹${fmt.format(rate)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, color: textColor))),
-                  Expanded(flex: 1, child: Text('₹${fmt.format(total)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: textColor))),
+                  Expanded(flex: 2, child: Padding(padding: const EdgeInsets.only(right: 8), child: Text('₹${fmt.format(rate)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, color: textColor)))),
+                  Expanded(flex: 2, child: Text('₹${fmt.format(total)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: textColor))),
                 ],
               ),
             );

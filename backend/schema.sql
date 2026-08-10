@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS shops (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Insert Dummy User and Shop for System Operations
+INSERT OR IGNORE INTO users (user_id, mobile, name) VALUES ('system_user', '0000000000', 'System User');
+INSERT OR IGNORE INTO shops (shop_id, owner_id, shop_name) VALUES ('system', 'system_user', 'System Shop');
+
 -- User-Shop mapping (for multi-shop support / staff)
 CREATE TABLE IF NOT EXISTS shop_users (
   id TEXT PRIMARY KEY,
@@ -39,6 +43,10 @@ CREATE TABLE IF NOT EXISTS products (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Insert dummy product for Custom Items (product_id = '0')
+INSERT OR IGNORE INTO products (product_id, name, category, stock) VALUES ('0', 'Custom Item / Service', 'System', 0);
+
 
 -- Customers table
 CREATE TABLE IF NOT EXISTS customers (

@@ -66,7 +66,7 @@ class InvoiceTemplateClassicGst extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  billData['shop_address'] ?? 'Fashion & Garments Retail Store',
+                  billData['shop_address'] ?? '',
                   style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade700),
                 ),
                 Text(
@@ -85,13 +85,16 @@ class InvoiceTemplateClassicGst extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Bill No: #${billData['bill_number']}', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
-                  Text('Date: $formattedDate', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade700)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Bill No: #${billData['bill_number']}', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text('Date: $formattedDate', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade700)),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -118,10 +121,10 @@ class InvoiceTemplateClassicGst extends StatelessWidget {
             color: Colors.grey.shade200,
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('ITEM', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold))),
+                Expanded(flex: 4, child: Text('ITEM', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold))),
                 Expanded(flex: 1, child: Text('QTY', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('RATE', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('TOTAL', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold))),
+                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.only(right: 8), child: Text('RATE', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold)))),
+                Expanded(flex: 2, child: Text('TOTAL', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold))),
               ],
             ),
           ),
@@ -139,10 +142,10 @@ class InvoiceTemplateClassicGst extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 children: [
-                  Expanded(flex: 3, child: Text(name, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500))),
+                  Expanded(flex: 4, child: Text(name, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500))),
                   Expanded(flex: 1, child: Text('$qty', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12))),
-                  Expanded(flex: 1, child: Text('₹${fmt.format(rate)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12))),
-                  Expanded(flex: 1, child: Text('₹${fmt.format(total)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold))),
+                  Expanded(flex: 2, child: Padding(padding: const EdgeInsets.only(right: 8), child: Text('₹${fmt.format(rate)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12)))),
+                  Expanded(flex: 2, child: Text('₹${fmt.format(total)}', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold))),
                 ],
               ),
             );
