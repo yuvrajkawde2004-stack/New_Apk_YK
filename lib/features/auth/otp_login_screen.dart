@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../core/theme/app_colors.dart';
 
 class OtpLoginScreen extends StatefulWidget {
@@ -85,6 +88,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       );
       return;
     }
+
     try {
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
         verificationId: _verificationId!,
@@ -161,7 +165,6 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Firebase Phone Auth
     try {
       final phoneNumber = target.startsWith('+') ? target : '+91$target';
       await FirebaseAuth.instance.verifyPhoneNumber(

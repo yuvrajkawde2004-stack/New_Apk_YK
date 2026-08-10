@@ -15,11 +15,13 @@ import 'features/dashboard/providers/dashboard_provider.dart';
 import 'core/services/sync_service.dart';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   try {
     await Firebase.initializeApp();
   } catch (e) {
