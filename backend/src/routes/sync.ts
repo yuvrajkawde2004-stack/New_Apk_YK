@@ -77,6 +77,44 @@ syncApp.post('/', async (c) => {
          }
        }
     }
+    else if (table === 'suppliers') {
+      if (action === 'INSERT') {
+        queries.push(c.env.DB.prepare(
+          `INSERT INTO suppliers (supplier_id, shop_id, name, phone, address, total_purchased, total_paid, outstanding_due) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(recordId, shopId, data.name, data.phone || '', data.address || '', data.total_purchased || 0, data.total_paid || 0, data.outstanding_due || 0));
+      } else if (action === 'UPDATE') {
+        queries.push(c.env.DB.prepare(
+          `UPDATE suppliers SET name=?, phone=?, address=?, total_purchased=?, total_paid=?, outstanding_due=? WHERE supplier_id=? AND shop_id=?`
+        ).bind(data.name, data.phone || '', data.address || '', data.total_purchased || 0, data.total_paid || 0, data.outstanding_due || 0, recordId, shopId));
+      } else if (action === 'DELETE') {
+        queries.push(c.env.DB.prepare(
+          `DELETE FROM suppliers WHERE supplier_id=? AND shop_id=?`
+        ).bind(recordId, shopId));
+      }
+    }
+    else if (table === 'purchases') {
+      if (action === 'INSERT') {
+        queries.push(c.env.DB.prepare(
+          `INSERT INTO purchases (purchase_id, shop_id, product_id, product_name, supplier_name, purchase_rate, quantity, total_amount, paid_amount, due_amount, purchase_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(recordId, shopId, data.product_id || '', data.product_name || '', data.supplier_name || '', data.purchase_rate || 0, data.quantity || 0, data.total_amount || 0, data.paid_amount || 0, data.due_amount || 0, data.purchase_date || '', data.notes || ''));
+      } else if (action === 'DELETE') {
+        queries.push(c.env.DB.prepare(`DELETE FROM purchases WHERE purchase_id=? AND shop_id=?`).bind(recordId, shopId));
+      }
+    }
+    else if (table === 'supplier_payments') {
+      if (action === 'INSERT') {
+        queries.push(c.env.DB.prepare(
+          `INSERT INTO supplier_payments (payment_id, shop_id, supplier_name, amount_paid, payment_method, payment_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind(recordId, shopId, data.supplier_name, data.amount_paid || 0, data.payment_method || 'Cash', data.payment_date || '', data.notes || ''));
+      }
+    }
+    else if (table === 'customer_payments') {
+      if (action === 'INSERT') {
+        queries.push(c.env.DB.prepare(
+          `INSERT INTO customer_payments (payment_id, shop_id, customer_id, bill_id, amount_paid, payment_method, payment_date) VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind(recordId, shopId, data.customer_id, data.bill_id, data.amount_paid || 0, data.payment_method || 'Cash', data.payment_date || ''));
+      }
+    }
   }
 
   try {

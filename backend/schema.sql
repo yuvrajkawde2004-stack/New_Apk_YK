@@ -107,3 +107,57 @@ CREATE TABLE IF NOT EXISTS sync_logs (
   action TEXT, -- 'INSERT', 'UPDATE', 'DELETE'
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Suppliers table
+CREATE TABLE IF NOT EXISTS suppliers (
+  supplier_id TEXT PRIMARY KEY,
+  shop_id TEXT REFERENCES shops(shop_id),
+  name TEXT NOT NULL,
+  phone TEXT,
+  address TEXT,
+  total_purchased REAL DEFAULT 0,
+  total_paid REAL DEFAULT 0,
+  outstanding_due REAL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Purchases (Stock) table
+CREATE TABLE IF NOT EXISTS purchases (
+  purchase_id TEXT PRIMARY KEY,
+  shop_id TEXT REFERENCES shops(shop_id),
+  product_id TEXT,
+  product_name TEXT,
+  supplier_name TEXT,
+  purchase_rate REAL DEFAULT 0,
+  quantity INTEGER DEFAULT 0,
+  total_amount REAL DEFAULT 0,
+  paid_amount REAL DEFAULT 0,
+  due_amount REAL DEFAULT 0,
+  purchase_date TEXT,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Supplier Payments table
+CREATE TABLE IF NOT EXISTS supplier_payments (
+  payment_id TEXT PRIMARY KEY,
+  shop_id TEXT REFERENCES shops(shop_id),
+  supplier_name TEXT,
+  amount_paid REAL DEFAULT 0,
+  payment_method TEXT,
+  payment_date TEXT,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Customer Payments table
+CREATE TABLE IF NOT EXISTS customer_payments (
+  payment_id TEXT PRIMARY KEY,
+  shop_id TEXT REFERENCES shops(shop_id),
+  customer_id TEXT,
+  bill_id TEXT,
+  amount_paid REAL DEFAULT 0,
+  payment_method TEXT,
+  payment_date TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

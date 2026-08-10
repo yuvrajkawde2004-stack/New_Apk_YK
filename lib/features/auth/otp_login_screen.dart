@@ -141,6 +141,33 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       if (account != null) {
         final email = account.email;
         
+        setState(() => _isLoading = true);
+        try {
+          // Fetch Cloudflare JWT token silently for Google users too
+          final sendOtpResponse = await http.post(
+            Uri.parse('https://retailflow-backend.retailflow-backend.workers.dev/api/auth/send-otp'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'target': email, 'type': 'gmail'}),
+          );
+          final sendData = jsonDecode(sendOtpResponse.body);
+          if (sendData['success'] == true && sendData['debug_otp'] != null) {
+            final debugOtp = sendData['debug_otp'];
+            final verifyResponse = await http.post(
+              Uri.parse('https://retailflow-backend.retailflow-backend.workers.dev/api/auth/verify-otp'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'target': email, 'code': debugOtp}),
+            );
+            final verifyData = jsonDecode(verifyResponse.body);
+            if (verifyData['success'] == true && verifyData['token'] != null) {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('auth_token', verifyData['token']);
+            }
+          }
+        } catch (e) {
+          debugPrint('Failed to sync token with backend: $e');
+        }
+        if (mounted) setState(() => _isLoading = false);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Google Login Successful! Welcome back.'),
