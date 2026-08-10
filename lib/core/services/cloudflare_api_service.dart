@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Cloudflare Backend API Client Service for Flutter App
 /// Architecture Workflow:
@@ -113,9 +114,16 @@ class CloudflareApiService {
         return {'success': true, 'id': DateTime.now().millisecondsSinceEpoch};
       }
 
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/customers'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({
           'name': name,
           'phone': phone,
@@ -138,8 +146,12 @@ class CloudflareApiService {
   /// 4. Customers API: Fetch Customers from Cloudflare D1 (SQLite Database)
   static Future<List<Map<String, dynamic>>> fetchCustomersFromCloudflare() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+
       final response = await http
-          .get(Uri.parse('$baseUrl/api/customers'))
+          .get(Uri.parse('$baseUrl/api/customers'), headers: headers)
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
@@ -158,8 +170,12 @@ class CloudflareApiService {
   /// 5. Products API: Fetch Products from Cloudflare D1
   static Future<List<Map<String, dynamic>>> fetchProductsFromCloudflare() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+
       final response = await http
-          .get(Uri.parse('$baseUrl/api/products'))
+          .get(Uri.parse('$baseUrl/api/products'), headers: headers)
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
