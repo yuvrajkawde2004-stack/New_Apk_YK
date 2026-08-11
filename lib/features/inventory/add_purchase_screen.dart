@@ -6,7 +6,8 @@ import '../../core/theme/app_colors.dart';
 
 class AddPurchaseScreen extends StatefulWidget {
   final VoidCallback? onSaved;
-  const AddPurchaseScreen({super.key, this.onSaved});
+  final String? initialSupplierName;
+  const AddPurchaseScreen({super.key, this.onSaved, this.initialSupplierName});
 
   @override
   State<AddPurchaseScreen> createState() => _AddPurchaseScreenState();
@@ -46,7 +47,11 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
     setState(() {
       _suppliers = sups;
       if (sups.isNotEmpty) {
-        _selectedSupplierName = sups.first['name'];
+        if (widget.initialSupplierName != null && sups.any((s) => s['name'] == widget.initialSupplierName)) {
+          _selectedSupplierName = widget.initialSupplierName;
+        } else {
+          _selectedSupplierName = sups.first['name'];
+        }
         _supCtrl.text = _selectedSupplierName!;
       }
     });

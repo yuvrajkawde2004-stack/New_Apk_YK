@@ -78,7 +78,7 @@ class _BillingScreenState extends State<BillingScreen> {
     if (widget.billToEdit != null) {
       _loadBillToEdit();
     } else {
-      _selectedCustomer = widget.customer ?? Customer(id: 1, name: 'Walk-in Customer', phone: 'N/A', outstandingBalance: 0);
+      _selectedCustomer = widget.customer;
     }
     _loadProducts();
   }
@@ -467,23 +467,17 @@ class _BillingScreenState extends State<BillingScreen> {
         'total': i.total,
       }).toList();
 
-      if (isEdit) {
-        final billId = widget.billToEdit!['id'] is int ? widget.billToEdit!['id'] as int : int.tryParse(widget.billToEdit!['id'].toString()) ?? 0;
-        await DatabaseHelper.instance.updateCompleteBill(billId, billData, itemsData);
-      } else {
-        await DatabaseHelper.instance.createCompleteBill(billData, itemsData);
-      }
+      Future<void> saveBillData() async {
+        if (isEdit) {
+          final billId = widget.billToEdit!['id'] is int ? widget.billToEdit!['id'] as int : int.tryParse(widget.billToEdit!['id'].toString()) ?? 0;
+          await DatabaseHelper.instance.updateCompleteBill(billId, billData, itemsData);
+        } else {
+          await DatabaseHelper.instance.createCompleteBill(billData, itemsData);
+        }
 
-      // Update customer dues if balance remains and we just created a NEW customer bill 
-      // (For edits, updateCompleteBill handles it perfectly!)
-      if (!isEdit && _dueAmount > 0 && _selectedCustomer != null && _selectedCustomer!.id != null) {
-        // We only do this for new bills because createCompleteBill doesn't actually do this if the customer already exists! 
-        // Wait, createCompleteBill DOES update outstanding_balance. We don't need this extra call.
-        // Let's remove the redundant updateCustomerDues call to prevent double addition.
-      }
-
-      if (mounted) {
-        Provider.of<DashboardProvider>(context, listen: false).refreshDashboard();
+        if (mounted) {
+          Provider.of<DashboardProvider>(context, listen: false).refreshDashboard();
+        }
       }
       
       await Future.delayed(const Duration(milliseconds: 300));
@@ -491,8 +485,38 @@ class _BillingScreenState extends State<BillingScreen> {
       setState(() => _isProcessing = false);
       
       if (_paymentMethod == 'UPI') {
-        _showUpiDialog(billData, upiId, upiName);
+        _showUpiDialog(billData, upiId, upiName, () async {
+          setState(() => _isProcessing = true);
+          try {
+            await saveBillData();
+            
+            final billIdResult = await DatabaseHelper.instance.database.then((db) => db.query('bills', where: 'bill_number = ?', whereArgs: [billNo]));
+            if (billIdResult.isNotEmpty) {
+              final billId = billIdResult.first['id'] as int;
+              await DatabaseHelper.instance.updateBill(billId, {
+                'payment_status': 'Paid',
+                'paid_at': DateTime.now().toIso8601String(),
+              });
+            }
+            if (mounted) {
+              setState(() => _isProcessing = false);
+            }
+            _showBillSuccessfulAnimationAndNavigate(billData);
+          } catch (e) {
+            debugPrint('Bill save error: $e');
+            if (mounted) {
+              setState(() => _isProcessing = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Bill save error: $e', style: GoogleFonts.outfit()),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+            }
+          }
+        });
       } else {
+        await saveBillData();
         _showBillSuccessfulAnimationAndNavigate(billData);
       }
       
@@ -532,7 +556,7 @@ class _BillingScreenState extends State<BillingScreen> {
               ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
               const SizedBox(height: 16),
               Text(
-                'Bill Successful!',
+                widget.billToEdit != null ? 'Bill Updated Successfully!' : 'Bill Successful!',
                 style: GoogleFonts.outfit(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -541,7 +565,9 @@ class _BillingScreenState extends State<BillingScreen> {
               ).animate().fadeIn(delay: 200.ms),
               const SizedBox(height: 8),
               Text(
-                'Invoice #${billData['bill_number']} saved successfully.\nRedirection to Customer Screen...',
+                widget.billToEdit != null
+                    ? 'Invoice #${billData['bill_number']} updated successfully.'
+                    : 'Invoice #${billData['bill_number']} saved successfully.\nRedirection to Customer Screen...',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
                   fontSize: 13,
@@ -555,17 +581,21 @@ class _BillingScreenState extends State<BillingScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CustomerListScreen(isEmbedded: false)),
-                    );
+                    if (widget.billToEdit != null) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CustomerListScreen(isEmbedded: false)),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: Text(
-                    'Go to Customer Screen',
+                    widget.billToEdit != null ? 'OK' : 'Go to Customer Screen',
                     style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
@@ -580,15 +610,19 @@ class _BillingScreenState extends State<BillingScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const CustomerListScreen(isEmbedded: false)),
-        );
+        if (widget.billToEdit != null) {
+          Navigator.pop(context);
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const CustomerListScreen(isEmbedded: false)),
+          );
+        }
       }
     });
   }
 
-  void _showUpiDialog(Map<String, dynamic> billData, String upiId, String upiName) {
+  void _showUpiDialog(Map<String, dynamic> billData, String upiId, String upiName, VoidCallback onPaymentDone) {
     final amount = billData['paid_amount'];
     final billNo = billData['bill_number'];
     final qrData = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(upiName)}&am=$amount&cu=INR&tn=$billNo';
@@ -599,9 +633,7 @@ class _BillingScreenState extends State<BillingScreen> {
       backgroundColor: Colors.transparent,
       isDismissible: false,
       enableDrag: false,
-      builder: (ctx) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
+      builder: (ctx) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -765,7 +797,6 @@ class _BillingScreenState extends State<BillingScreen> {
                     child: TextButton(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        Navigator.pop(context);
                       },
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -785,17 +816,9 @@ class _BillingScreenState extends State<BillingScreen> {
                         ],
                       ),
                       child: ElevatedButton(
-                        onPressed: () async {
+                        onPressed: () {
                           Navigator.pop(ctx);
-                          final billIdResult = await DatabaseHelper.instance.database.then((db) => db.query('bills', where: 'bill_number = ?', whereArgs: [billNo]));
-                          if (billIdResult.isNotEmpty) {
-                            final billId = billIdResult.first['id'] as int;
-                            await DatabaseHelper.instance.updateBill(billId, {
-                              'payment_status': 'Paid',
-                              'paid_at': DateTime.now().toIso8601String(),
-                            });
-                          }
-                          _showBillSuccessfulAnimationAndNavigate(billData);
+                          onPaymentDone();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.emeraldGreen,
@@ -812,7 +835,6 @@ class _BillingScreenState extends State<BillingScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -1048,7 +1070,7 @@ class _BillingScreenState extends State<BillingScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _selectedCustomer?.name ?? 'Select Customer (Walk-in)',
+                            _selectedCustomer?.name ?? 'Select Customer First',
                             style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           const SizedBox(height: 4),

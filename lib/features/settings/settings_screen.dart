@@ -158,8 +158,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: AppColors.royalBlue,
                   title: 'Free UPI & Payments',
                   subtitle: 'Setup UPI ID for Dynamic QR Codes',
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const UPISettingsScreen()));
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    final upiId = prefs.getString('upi_id') ?? '';
+                    if (upiId.isNotEmpty) {
+                      if (!context.mounted) return;
+                      final bool? confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (dCtx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: Text('Edit UPI Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                          content: Text('Are you sure you want to edit your UPI details?', style: GoogleFonts.outfit()),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dCtx, false),
+                              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(dCtx, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.royalBlue,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Text('OK', style: GoogleFonts.outfit(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm != true) return;
+                    }
+                    if (context.mounted) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const UPISettingsScreen()));
+                    }
                   },
                 ),
               ]),

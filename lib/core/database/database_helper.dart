@@ -1518,6 +1518,17 @@ class DatabaseHelper {
         });
       }
 
+      // 4. Log the payment if any
+      if (paidAmount > 0) {
+        await txn.insert('supplier_payments', {
+          'supplier_name': supplierName,
+          'amount_paid': paidAmount,
+          'payment_method': 'Cash',
+          'payment_date': nowStr,
+          'created_at': nowStr,
+        });
+      }
+
       await _logSyncAction(txn, 'purchases', 'INSERT', purchaseId.toString(), {
         'product_name': productName,
         'supplier_name': supplierName,

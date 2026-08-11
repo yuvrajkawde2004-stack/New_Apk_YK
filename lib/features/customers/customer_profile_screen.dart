@@ -407,11 +407,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
       // Add bills
       for (var b in _customerBills) {
+        final billNo = b['bill_number']?.toString() ?? b['id']?.toString() ?? 'Unknown';
         allTrans.add({
           'date': b['bill_date']?.toString().substring(0, 10) ?? '',
-          'description': 'Bill #${b['id']}',
-          'amount': (b['grand_total'] as num?)?.toDouble() ?? 0.0,
-          'is_credit': false, // debit (adding to due)
+          'description': 'Bill #$billNo',
+          'total_amt': (b['grand_total'] as num?)?.toDouble() ?? 0.0,
+          'paid_amt': (b['paid_amount'] as num?)?.toDouble() ?? 0.0,
+          'pending_amt': (b['due_amount'] as num?)?.toDouble() ?? 0.0,
+          'is_bill': true,
         });
       }
 
@@ -420,16 +423,21 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         allTrans.add({
           'date': p['payment_date']?.toString().substring(0, 10) ?? '',
           'description': 'Payment Received (${p['payment_method'] ?? 'Cash'})',
-          'amount': (p['amount_paid'] as num?)?.toDouble() ?? 0.0,
-          'is_credit': true, // credit (paying off due)
+          'total_amt': 0.0,
+          'paid_amt': (p['amount_paid'] as num?)?.toDouble() ?? 0.0,
+          'pending_amt': 0.0,
+          'is_bill': false,
         });
       }
 
       // Sort by date descending
       allTrans.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
 
+      final prefs = await SharedPreferences.getInstance();
+      final shopName = prefs.getString('shop_name') ?? 'Our Shop';
+
       final pdfBytes = await LedgerPdfService.generateLedgerPdf(
-        title: 'Customer Ledger Statement',
+        title: '$shopName - Customer Ledger',
         partyName: widget.customer.name,
         phone: widget.customer.phone ?? '',
         totalOutstanding: _currentOutstanding,
@@ -437,10 +445,11 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       );
 
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/${widget.customer.name.replaceAll(' ', '_')}_Ledger.pdf');
+      final safeShopName = shopName.replaceAll(' ', '_').replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+      final file = File('${tempDir.path}/${safeShopName}_${widget.customer.name.replaceAll(' ', '_')}_Ledger.pdf');
       await file.writeAsBytes(pdfBytes);
 
-      await Share.shareXFiles([XFile(file.path)], text: 'Ledger Statement for ${widget.customer.name}');
+      await Share.shareXFiles([XFile(file.path)], text: '$shopName - Ledger Statement for ${widget.customer.name}');
     } catch (e) {
       debugPrint('Error generating PDF: $e');
       if (mounted) {
@@ -862,9 +871,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 'Bill: $billNo',
                 style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 6),
               Text(
-                'Amount: ₹${bill['grand_total']}',
-                style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13),
+                'Total: ₹${bill['grand_total']}  |  Paid: ₹${bill['paid_amount']}  |  Due: ₹${bill['due_amount']}',
+                style: GoogleFonts.outfit(color: Colors.grey.shade700, fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 20),
               if (((bill['due_amount'] as num?)?.toDouble() ?? 0.0) > 0)
@@ -1349,10 +1359,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   }
 
   void _showSettleDuesSheet() {
-    final pendingBills = _customerBills.where((b) {
-      final due = (b['due_amount'] as num?)?.toDouble() ?? 0.0;
-      return due > 0;
-    }).toList();
+    final allBills = _customerBills;
 
     showModalBottomSheet(
       context: context,
@@ -1369,41 +1376,65 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             const SizedBox(height: 12),
             Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
             const SizedBox(height: 20),
-            Text('Pending Dues (KhataBook)', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Ledger & Dues (KhataBook)', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             Expanded(
-              child: pendingBills.isEmpty
-                  ? Center(child: Text('No pending dues found.', style: GoogleFonts.outfit()))
+              child: allBills.isEmpty
+                  ? Center(child: Text('No bills found.', style: GoogleFonts.outfit()))
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: pendingBills.length,
+                      itemCount: allBills.length,
                       itemBuilder: (context, index) {
-                        final bill = pendingBills[index];
+                        final bill = allBills[index];
                         final dueAmt = (bill['due_amount'] as num?)?.toDouble() ?? 0.0;
+                        final paidAmt = (bill['paid_amount'] as num?)?.toDouble() ?? 0.0;
+                        final totalAmt = (bill['grand_total'] as num?)?.toDouble() ?? 0.0;
                         final billNo = bill['bill_number'];
+                        final isPaid = dueAmt <= 0;
+
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 2,
                           child: ListTile(
+                            onTap: () {
+                              _showBillOptionsBottomSheet(bill);
+                            },
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             leading: CircleAvatar(
-                              backgroundColor: AppColors.softOrange.withOpacity(0.2),
-                              child: const Icon(Icons.receipt_long, color: AppColors.softOrange),
+                              backgroundColor: isPaid ? AppColors.emeraldGreen.withOpacity(0.2) : AppColors.softOrange.withOpacity(0.2),
+                              child: Icon(Icons.receipt_long, color: isPaid ? AppColors.emeraldGreen : AppColors.softOrange),
                             ),
                             title: Text('Invoice #$billNo', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                            subtitle: Text('Due: ₹${dueAmt.toStringAsFixed(0)}', style: GoogleFonts.outfit(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                            trailing: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _showReceivePaymentSheet(bill); // Reusing existing payment method
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.royalBlue,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text('Pay', style: GoogleFonts.outfit(color: Colors.white)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text('Total: ₹${totalAmt.toStringAsFixed(0)} | Paid: ₹${paidAmt.toStringAsFixed(0)}', style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey.shade700)),
+                                if (!isPaid)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text('Due: ₹${dueAmt.toStringAsFixed(0)}', style: GoogleFonts.outfit(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                                  ),
+                              ]
                             ),
+                            trailing: isPaid 
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(color: AppColors.emeraldGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                    child: Text('PAID', style: GoogleFonts.outfit(color: AppColors.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  )
+                                : ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      _showReceivePaymentSheet(bill); 
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.royalBlue,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    child: Text('Pay', style: GoogleFonts.outfit(color: Colors.white)),
+                                  ),
                           ),
                         );
                       },

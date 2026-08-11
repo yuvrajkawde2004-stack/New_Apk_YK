@@ -17,6 +17,7 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
   final _upiNameController = TextEditingController();
   
   bool _isLoading = true;
+  bool _hasUnsavedChanges = false;
   String _previewQrData = '';
 
   @override
@@ -53,6 +54,7 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
     await prefs.setString('upi_name', _upiNameController.text.trim());
     
     if (mounted) {
+      setState(() => _hasUnsavedChanges = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('UPI Settings Saved successfully!'), backgroundColor: AppColors.emeraldGreen),
       );
@@ -88,7 +90,10 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
               
               TextFormField(
                 controller: _upiIdController,
-                onChanged: (_) => _updateQrPreview(),
+                onChanged: (_) {
+                  setState(() => _hasUnsavedChanges = true);
+                  _updateQrPreview();
+                },
                 decoration: InputDecoration(
                   labelText: 'UPI ID / VPA',
                   hintText: 'e.g. 9876543210@ybl',
@@ -107,7 +112,10 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
               TextFormField(
                 controller: _upiNameController,
                 textCapitalization: TextCapitalization.words,
-                onChanged: (_) => _updateQrPreview(),
+                onChanged: (_) {
+                  setState(() => _hasUnsavedChanges = true);
+                  _updateQrPreview();
+                },
                 decoration: InputDecoration(
                   labelText: 'Display Name (Payee Name)',
                   hintText: 'e.g. ABC Supermart',
@@ -118,19 +126,39 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
               
               const SizedBox(height: 32),
               
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _saveSettings,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.royalBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
+              if (_hasUnsavedChanges)
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _saveSettings,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.royalBlue,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: Text('Save UPI Settings', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
-                  child: Text('Save UPI Settings', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                )
+              else
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: AppColors.emeraldGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.emeraldGreen.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: AppColors.emeraldGreen),
+                        const SizedBox(width: 8),
+                        Text('Settings Saved', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.emeraldGreen, fontSize: 16)),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
               
               const SizedBox(height: 48),
               

@@ -71,15 +71,19 @@ class LedgerPdfService {
                 headerDecoration: const pw.BoxDecoration(color: PdfColors.blue800),
                 cellStyle: const pw.TextStyle(fontSize: 10),
                 cellPadding: const pw.EdgeInsets.all(8),
-                headers: ['Date', 'Description', 'Amount'],
+                headers: ['Date', 'Description', 'Bill Amt', 'Paid Amt', 'Pending'],
                 data: transactions.map((t) {
-                  final amount = (t['amount'] as num?)?.toDouble() ?? 0.0;
-                  final amtText = 'Rs. ${fmt.format(amount)}';
+                  final isBill = t['is_bill'] == true;
+                  final totalAmt = (t['total_amt'] as num?)?.toDouble() ?? 0.0;
+                  final paidAmt = (t['paid_amt'] as num?)?.toDouble() ?? 0.0;
+                  final pendingAmt = (t['pending_amt'] as num?)?.toDouble() ?? 0.0;
                   
                   return [
                     t['date'] ?? '',
                     t['description'] ?? '',
-                    amtText,
+                    isBill ? 'Rs. ${fmt.format(totalAmt)}' : '-',
+                    'Rs. ${fmt.format(paidAmt)}',
+                    isBill ? 'Rs. ${fmt.format(pendingAmt)}' : '-',
                   ];
                 }).toList(),
               ),

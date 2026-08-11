@@ -13,6 +13,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import 'providers/dashboard_provider.dart';
 import '../billing/billing_screen.dart';
+import '../billing/all_bills_screen.dart';
 import '../customers/customer_list_screen.dart';
 import '../inventory/inventory_screen.dart';
 import '../reports/reports_screen.dart';
@@ -415,13 +416,13 @@ class _HomeTab extends StatelessWidget {
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const ReportsScreen()),
+                                MaterialPageRoute(builder: (_) => const AllBillsScreen()),
                               );
                             },
                             child: Row(
                               children: [
                                 Text(
-                                  'View All',
+                                  'View All Bills',
                                   style: GoogleFonts.outfit(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
