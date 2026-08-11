@@ -1153,19 +1153,24 @@ class DatabaseHelper {
 
   Future<int> saveShopSettings(Map<String, dynamic> data) async {
     final db = await database;
-
-    final result = await db.query('shop_settings');
-
-    if (result.isEmpty) {
-      return await db.insert('shop_settings', data);
-    } else {
-      return await db.update(
-        'shop_settings',
-        data,
-        where: 'id = ?',
-        whereArgs: [result.first['id']],
-      );
-    }
+    int id = 0;
+    
+    await db.transaction((txn) async {
+      final result = await txn.query('shop_settings', limit: 1);
+      if (result.isEmpty) {
+        id = await txn.insert('shop_settings', data);
+      } else {
+        id = result.first['id'] as int;
+        await txn.update(
+          'shop_settings',
+          data,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+      await _logSyncAction(txn, 'shop_settings', result.isEmpty ? 'INSERT' : 'UPDATE', '1', data);
+    });
+    return id;
   }
 
   Future<Map<String, dynamic>?> getShopSettings() async {
@@ -1721,22 +1726,6 @@ class DatabaseHelper {
     });
   }
 
-  // ==========================
-  // 10. SHOP SETTINGS (For Cloud Sync)
-  // ==========================
-
-  Future<void> saveShopSettings(Map<String, dynamic> settings) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      final existing = await txn.query('shop_settings', limit: 1);
-      if (existing.isEmpty) {
-        await txn.insert('shop_settings', settings);
-      } else {
-        await txn.update('shop_settings', settings, where: 'id = ?', whereArgs: [existing.first['id']]);
-      }
-      await _logSyncAction(txn, 'shop_settings', existing.isEmpty ? 'INSERT' : 'UPDATE', '1', settings);
-    });
-  }
 
   // ==========================
   // 11. UNITS CRUD
