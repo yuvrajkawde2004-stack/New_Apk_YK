@@ -69,9 +69,12 @@ class _HomeTab extends StatelessWidget {
     return Consumer<DashboardProvider>(
       builder: (context, provider, _) {
         return SafeArea(
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
+          child: RefreshIndicator(
+            onRefresh: () => provider.loadDataFromDatabase(),
+            color: AppColors.royalBlue,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              slivers: [
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
@@ -128,21 +131,7 @@ class _HomeTab extends StatelessWidget {
                               ),
                             ],
                           ),
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(Icons.notifications_outlined, color: AppColors.textPrimaryLight, size: 20),
-                          ),
+
                         ],
                       ).animate().fadeIn().slideY(begin: -0.1, end: 0),
 
@@ -454,18 +443,19 @@ class _HomeTab extends StatelessWidget {
               ),
             ],
           ),
+          ),
         );
       },
     );
   }
 
-  void _showAverageProfitModal(BuildContext context) {
+  void _showAverageProfitModal(BuildContext context) async {
+    final stats = await DatabaseHelper.instance.getAverageProfitStats();
+    if (!mounted) return;
+    
     showDialog(
       context: context,
-      builder: (ctx) => FutureBuilder<Map<String, double>>(
-        future: DatabaseHelper.instance.getAverageProfitStats(),
-        builder: (ctx, snapshot) {
-          final stats = snapshot.data ?? {};
+      builder: (ctx) {
           final totalProfit = stats['total_profit'] ?? 0.0;
           final avgItemProfit = stats['avg_profit_per_item'] ?? 0.0;
           final avgBillProfit = stats['avg_profit_per_bill'] ?? 0.0;
@@ -541,7 +531,6 @@ class _HomeTab extends StatelessWidget {
             ],
           );
         },
-      ),
     );
   }
   Widget _heroStatItem({
@@ -834,22 +823,9 @@ class _HomeTab extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return FutureBuilder<List<Map<String, dynamic>>>(
-          future: DatabaseHelper.instance.getBillItems(billData['id']),
-          builder: (context, itemsSnapshot) {
-            if (!itemsSnapshot.hasData) {
-              return Container(
-                height: 300,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                child: const Center(child: CircularProgressIndicator(color: AppColors.royalBlue)),
-              );
-            }
-            final itemsData = itemsSnapshot.data!;
+        final itemsData = (billData['items'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
 
-            return FutureBuilder<SharedPreferences>(
+        return FutureBuilder<SharedPreferences>(
               future: SharedPreferences.getInstance(),
               builder: (context, prefSnapshot) {
                 if (!prefSnapshot.hasData) {
@@ -922,12 +898,40 @@ class _HomeTab extends StatelessWidget {
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: billData)),
+                                onPressed: () async {
+                                  Navigator.pop(context); // Close the bill preview dialog
+                                  
+                                  final bool? confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      title: Text('Edit Bill', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                      content: Text('Are you sure you want to edit this bill?', style: GoogleFonts.outfit()),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx, false),
+                                          child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.pop(ctx, true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.royalBlue,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          ),
+                                          child: Text('OK', style: GoogleFonts.outfit(color: Colors.white)),
+                                        ),
+                                      ],
+                                    ),
                                   );
+                                  
+                                  if (confirm == true) {
+                                    if (context.mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: billData)),
+                                      );
+                                    }
+                                  }
                                 },
                                 style: OutlinedButton.styleFrom(
                                   minimumSize: const Size(0, 52),
@@ -961,7 +965,7 @@ class _HomeTab extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               try {
-                                final image = await screenshotController.capture(pixelRatio: 2.0);
+                                final image = await screenshotController.capture(pixelRatio: 4.0);
                                 if (image == null) return;
 
                                 final directory = await getTemporaryDirectory();
@@ -994,8 +998,6 @@ class _HomeTab extends StatelessWidget {
                 );
               },
             );
-          },
-        );
       },
     );
   }

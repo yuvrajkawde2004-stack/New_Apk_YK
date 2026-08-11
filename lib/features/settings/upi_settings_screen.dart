@@ -106,6 +106,7 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
               
               TextFormField(
                 controller: _upiNameController,
+                textCapitalization: TextCapitalization.words,
                 onChanged: (_) => _updateQrPreview(),
                 decoration: InputDecoration(
                   labelText: 'Display Name (Payee Name)',

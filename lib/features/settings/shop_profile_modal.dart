@@ -139,6 +139,7 @@ class _ShopProfileModalState extends State<ShopProfileModal> {
   Widget _buildTextField(String label, IconData icon, TextEditingController controller) {
     return TextField(
       controller: controller,
+      textCapitalization: TextCapitalization.sentences,
       style: GoogleFonts.outfit(color: AppColors.textPrimaryLight),
       decoration: InputDecoration(
         labelText: label,

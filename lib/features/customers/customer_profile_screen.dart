@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +11,7 @@ import '../../core/models/customer.dart';
 import '../../core/theme/app_colors.dart';
 import '../billing/billing_screen.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/services/ledger_pdf_service.dart';
 import '../billing/templates/invoice_template_classic_gst.dart';
 import '../billing/templates/invoice_template_premium_gold.dart';
 import '../billing/templates/invoice_template_modern_emerald.dart';
@@ -27,10 +30,12 @@ class CustomerProfileScreen extends StatefulWidget {
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   List<Map<String, dynamic>> _customerBills = [];
   bool _isLoading = true;
+  double _currentOutstanding = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _currentOutstanding = widget.customer.outstandingBalance;
     _loadCustomerBills();
   }
 
@@ -41,8 +46,18 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         customerName: widget.customer.name, 
         customerPhone: widget.customer.phone,
       );
+      
+      double updatedOutstanding = _currentOutstanding;
+      if (widget.customer.id != null) {
+        final custMap = await DatabaseHelper.instance.getCustomerById(widget.customer.id!);
+        if (custMap != null) {
+          updatedOutstanding = (custMap['outstanding_balance'] as num?)?.toDouble() ?? 0.0;
+        }
+      }
+
       setState(() {
         _customerBills = bills;
+        _currentOutstanding = updatedOutstanding;
         _isLoading = false;
       });
     } catch (e) {
@@ -145,7 +160,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         try {
-                          final image = await screenshotController.capture(pixelRatio: 2.0);
+                          final image = await screenshotController.capture(pixelRatio: 4.0);
                           if (image == null) return;
                           
                           final directory = await getTemporaryDirectory();
@@ -378,9 +393,57 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
+  Future<void> _downloadLedgerPdf() async {
+    try {
+      final List<Map<String, dynamic>> allTrans = [];
+
+      // Add bills
+      for (var b in _bills) {
+        allTrans.add({
+          'date': b['bill_date']?.toString().substring(0, 10) ?? '',
+          'description': 'Bill #${b['id']}',
+          'amount': (b['grand_total'] as num?)?.toDouble() ?? 0.0,
+          'is_credit': false, // debit (adding to due)
+        });
+      }
+
+      // Add payments
+      for (var p in _payments) {
+        allTrans.add({
+          'date': p['payment_date']?.toString().substring(0, 10) ?? '',
+          'description': 'Payment Received (${p['payment_method'] ?? 'Cash'})',
+          'amount': (p['amount_paid'] as num?)?.toDouble() ?? 0.0,
+          'is_credit': true, // credit (paying off due)
+        });
+      }
+
+      // Sort by date descending
+      allTrans.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
+
+      final pdfBytes = await LedgerPdfService.generateLedgerPdf(
+        title: 'Customer Ledger Statement',
+        partyName: widget.customer.name,
+        phone: widget.customer.phone,
+        totalOutstanding: _currentOutstanding,
+        transactions: allTrans,
+      );
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/${widget.customer.name.replaceAll(' ', '_')}_Ledger.pdf');
+      await file.writeAsBytes(pdfBytes);
+
+      await Share.shareXFiles([XFile(file.path)], text: 'Ledger Statement for ${widget.customer.name}');
+    } catch (e) {
+      debugPrint('Error generating PDF: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating PDF: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasDue = widget.customer.outstandingBalance > 0;
+    final hasDue = _currentOutstanding > 0;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -390,6 +453,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           icon: const Icon(Icons.arrow_back_ios_rounded),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.royalBlue),
+            tooltip: 'Download Ledger PDF',
+            onPressed: _downloadLedgerPdf,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -491,32 +562,36 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   const SizedBox(height: 16),
 
                   // Balance Due Chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: hasDue ? AppColors.softOrange.withValues(alpha: 0.1) : AppColors.emeraldGreen.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: hasDue ? AppColors.softOrange.withValues(alpha: 0.3) : AppColors.emeraldGreen.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          hasDue ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
-                          color: hasDue ? AppColors.softOrange : AppColors.emeraldGreen,
+                  GestureDetector(
+                    onTap: hasDue ? _showSettleDuesSheet : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: hasDue ? AppColors.softOrange.withValues(alpha: 0.1) : AppColors.emeraldGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: hasDue ? AppColors.softOrange.withValues(alpha: 0.3) : AppColors.emeraldGreen.withValues(alpha: 0.3),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          hasDue ? 'Outstanding Due: ₹${widget.customer.outstandingBalance.toStringAsFixed(0)}' : 'Clear (No Dues)',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            hasDue ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
                             color: hasDue ? AppColors.softOrange : AppColors.emeraldGreen,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Text(
+                            hasDue ? 'Outstanding Due: ₹${_currentOutstanding.toStringAsFixed(0)}\n(Tap to Pay)' : 'Clear (No Dues)',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: hasDue ? AppColors.softOrange : AppColors.emeraldGreen,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
@@ -608,11 +683,38 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                                       _openWhatsAppChat(b);
                                     },
                                     onLongPress: () async {
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: b)),
+                                      final bool? confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                          title: Text('Edit Bill', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                          content: Text('Are you sure you want to edit this bill?', style: GoogleFonts.outfit()),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppColors.royalBlue,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              ),
+                                              child: Text('OK', style: GoogleFonts.outfit(color: Colors.white)),
+                                            ),
+                                          ],
+                                        ),
                                       );
-                                      _loadCustomerBills();
+                                      
+                                      if (confirm == true) {
+                                        if (context.mounted) {
+                                          await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: b)),
+                                          );
+                                          _loadCustomerBills();
+                                        }
+                                      }
                                     },
                                   ),
                                 );
@@ -779,11 +881,38 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 title: const Text('Edit Bill', style: TextStyle(fontWeight: FontWeight.w600)),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: bill)),
+                  final bool? confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (dCtx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: Text('Edit Bill', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                      content: Text('Are you sure you want to edit this bill?', style: GoogleFonts.outfit()),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dCtx, false),
+                          child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(dCtx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.royalBlue,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text('OK', style: GoogleFonts.outfit(color: Colors.white)),
+                        ),
+                      ],
+                    ),
                   );
-                  _loadCustomerBills();
+
+                  if (confirm == true) {
+                    if (context.mounted) {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: bill)),
+                      );
+                      _loadCustomerBills();
+                    }
+                  }
                 },
               ),
               ListTile(
@@ -980,7 +1109,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                                 child: DropdownButton<String>(
                                   value: paymentMethod,
                                   isExpanded: true,
-                                  items: ['Cash', 'UPI', 'Card', 'Bank Transfer'].map((m) => DropdownMenuItem(value: m, child: Text(m, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)))).toList(),
+                                  items: ['Cash', 'UPI'].map((m) => DropdownMenuItem(value: m, child: Text(m, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)))).toList(),
                                   onChanged: (val) {
                                     if (val != null) setModalState(() => paymentMethod = val);
                                   },
@@ -1003,6 +1132,23 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         if (amountToPay <= 0) return;
                         if (amountToPay > dueAmount) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot pay more than due amount!'), backgroundColor: Colors.redAccent));
+                          return;
+                        }
+
+                        if (paymentMethod == 'UPI') {
+                          final prefs = await SharedPreferences.getInstance();
+                          final upiId = prefs.getString('upi_id') ?? '';
+                          final upiName = prefs.getString('upi_name') ?? '';
+                          
+                          if (upiId.isEmpty) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please setup UPI in Settings first.')));
+                            }
+                            return;
+                          }
+                          
+                          Navigator.pop(ctx);
+                          _showUpiDialogForOutstanding(amountToPay, billId, upiId, upiName, paymentDate);
                           return;
                         }
 
@@ -1050,6 +1196,213 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             ),
           );
         },
+      ),
+    );
+    void _showUpiDialogForOutstanding(double amount, int billId, String upiId, String upiName, DateTime paymentDate) {
+    final qrData = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(upiName)}&am=$amount&cu=INR';
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                boxShadow: [
+                  BoxShadow(color: AppColors.royalBlue.withOpacity(0.15), blurRadius: 40, offset: const Offset(0, -10)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: AppColors.royalBlue.withOpacity(0.1), shape: BoxShape.circle),
+                        child: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.royalBlue, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Text('Scan to Pay', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(colors: [AppColors.royalBlue, Color(0xFF6366F1)]).createShader(bounds),
+                    child: Text('₹${amount.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white)),
+                  ),
+                  const SizedBox(height: 24),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 240, height: 240,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(color: AppColors.royalBlue.withOpacity(0.15), blurRadius: 30, spreadRadius: 5),
+                            BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.1), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 10)),
+                          ],
+                          border: Border.all(color: AppColors.royalBlue.withOpacity(0.1), width: 2),
+                        ),
+                        padding: const EdgeInsets.all(20),
+                        child: QrImageView(
+                          data: qrData,
+                          version: QrVersions.auto,
+                          backgroundColor: Colors.white,
+                          eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
+                          dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.circle, color: Color(0xFF1E293B)),
+                        ),
+                      ),
+                      Positioned(
+                        top: 20,
+                        child: Container(
+                          width: 200, height: 3,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [Colors.transparent, AppColors.emeraldGreen, Colors.transparent]),
+                            boxShadow: [BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.6), blurRadius: 8, spreadRadius: 2)],
+                          ),
+                        ).animate(onPlay: (controller) => controller.repeat(reverse: true)).slideY(begin: 0, end: 60, duration: 2.seconds, curve: Curves.easeInOut),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        
+                        await DatabaseHelper.instance.recordCustomerPayment(
+                          widget.customer.id ?? 0,
+                          billId,
+                          amount,
+                          'UPI',
+                          paymentDate.toIso8601String(),
+                        );
+                        _loadCustomerBills();
+                        
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                  const SizedBox(width: 10),
+                                  Text('₹${amount.toStringAsFixed(0)} payment received!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              backgroundColor: const Color(0xFF10B981),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 24),
+                      label: Text('MARK AS PAID', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.2)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.emeraldGreen,
+                        elevation: 4,
+                        shadowColor: AppColors.emeraldGreen.withOpacity(0.4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('Cancel', style: GoogleFonts.outfit(fontSize: 16, color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+}
+
+  void _showSettleDuesSheet() {
+    final pendingBills = _customerBills.where((b) {
+      final due = (b['due_amount'] as num?)?.toDouble() ?? 0.0;
+      return due > 0;
+    }).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
+            const SizedBox(height: 20),
+            Text('Pending Dues (KhataBook)', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Expanded(
+              child: pendingBills.isEmpty
+                  ? Center(child: Text('No pending dues found.', style: GoogleFonts.outfit()))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: pendingBills.length,
+                      itemBuilder: (context, index) {
+                        final bill = pendingBills[index];
+                        final dueAmt = (bill['due_amount'] as num?)?.toDouble() ?? 0.0;
+                        final billNo = bill['bill_number'];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 2,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            leading: CircleAvatar(
+                              backgroundColor: AppColors.softOrange.withOpacity(0.2),
+                              child: const Icon(Icons.receipt_long, color: AppColors.softOrange),
+                            ),
+                            title: Text('Invoice #$billNo', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                            subtitle: Text('Due: ₹${dueAmt.toStringAsFixed(0)}', style: GoogleFonts.outfit(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                            trailing: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _showReceivePaymentSheet(bill); // Reusing existing payment method
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.royalBlue,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: Text('Pay', style: GoogleFonts.outfit(color: Colors.white)),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

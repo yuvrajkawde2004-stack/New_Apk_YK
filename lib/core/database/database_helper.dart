@@ -40,7 +40,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 15,
+      version: 16,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -212,6 +212,16 @@ class DatabaseHelper {
       try { await db.execute("ALTER TABLE bills ADD COLUMN payment_upi_id TEXT"); } catch (_) {}
       try { await db.execute("ALTER TABLE bills ADD COLUMN payment_reference TEXT"); } catch (_) {}
       try { await db.execute("ALTER TABLE bills ADD COLUMN paid_at TEXT"); } catch (_) {}
+    }
+
+    if (oldVersion < 16) {
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_bill_items_bill_id ON bill_items(bill_id)");
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_bill_items_product_id ON bill_items(product_id)");
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id)");
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_purchases_product_id ON purchases(product_id)");
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_customer_payments_customer_id ON customer_payments(customer_id)");
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_customer_payments_bill_id ON customer_payments(bill_id)");
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier_name ON supplier_payments(supplier_name)");
     }
   }
 
@@ -392,7 +402,15 @@ class DatabaseHelper {
         created_at TEXT NOT NULL
       )
     ''');
-    
+    // Create Indexes for Foreign Keys
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_bill_items_bill_id ON bill_items(bill_id)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_bill_items_product_id ON bill_items(product_id)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_purchases_product_id ON purchases(product_id)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_customer_payments_customer_id ON customer_payments(customer_id)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_customer_payments_bill_id ON customer_payments(bill_id)");
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier_name ON supplier_payments(supplier_name)");
+
     // Insert Dummy Product for Custom Items (id = 0)
     try {
       await db.insert('products', {
@@ -1215,20 +1233,20 @@ class DatabaseHelper {
 
   Future<double> getProfitForPeriod(String period) async {
     final db = await database;
-    String dateCondition = '';
+    String dateCondition = 'WHERE 1=1 AND bi.product_id != 0';
     List<dynamic> args = [];
 
     final today = DateTime.now();
 
     if (period == 'Daily') {
-      dateCondition = 'WHERE b.bill_date LIKE ?';
+      dateCondition += ' AND b.bill_date LIKE ?';
       args.add('${today.toIso8601String().substring(0, 10)}%');
     } else if (period == 'Monthly') {
-      dateCondition = 'WHERE b.bill_date LIKE ?';
+      dateCondition += ' AND b.bill_date LIKE ?';
       args.add('${today.toIso8601String().substring(0, 7)}%');
     } else if (period == 'Weekly') {
       final weekAgoStr = today.subtract(const Duration(days: 7)).toIso8601String().substring(0, 10);
-      dateCondition = 'WHERE SUBSTR(b.bill_date, 1, 10) >= ?';
+      dateCondition += ' AND SUBSTR(b.bill_date, 1, 10) >= ?';
       args.add(weekAgoStr);
     }
 
@@ -1251,6 +1269,25 @@ class DatabaseHelper {
       orderBy: 'id DESC',
       limit: 5,
     );
+  }
+
+  // Recent Bills With Items (Last 5 bills)
+  Future<List<Map<String, dynamic>>> getRecentBillsWithItems() async {
+    final db = await database;
+    final bills = await db.query(
+      'bills',
+      orderBy: 'id DESC',
+      limit: 5,
+    );
+    
+    final List<Map<String, dynamic>> billsWithItems = [];
+    for (var bill in bills) {
+      final items = await getBillItems(bill['id'] as int);
+      final mutableBill = Map<String, dynamic>.from(bill);
+      mutableBill['items'] = items;
+      billsWithItems.add(mutableBill);
+    }
+    return billsWithItems;
   }
 
   // Low Stock List Preview (Items where quantity <= low_stock_limit)
@@ -1594,6 +1631,62 @@ class DatabaseHelper {
       await txn.delete('sync_logs');
     });
   }
+  Future<void> settleBillDue(int billId, double amountPaid) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // 1. Get the current bill
+      final List<Map<String, dynamic>> billDataList = await txn.query('bills', where: 'id = ?', whereArgs: [billId]);
+      if (billDataList.isEmpty) return;
+      final bill = billDataList.first;
+      
+      final double currentPaid = (bill['paid_amount'] as num?)?.toDouble() ?? 0.0;
+      final double currentDue = (bill['due_amount'] as num?)?.toDouble() ?? 0.0;
+      
+      if (currentDue <= 0) return; // Nothing to settle
+
+      // Actual amount we are settling is min of amountPaid and currentDue
+      final double amountToSettle = amountPaid > currentDue ? currentDue : amountPaid;
+      
+      final double newPaid = currentPaid + amountToSettle;
+      final double newDue = currentDue - amountToSettle;
+      
+      // 2. Update the bill
+      await txn.update(
+        'bills',
+        {
+          'paid_amount': newPaid,
+          'due_amount': newDue,
+        },
+        where: 'id = ?',
+        whereArgs: [billId],
+      );
+      
+      // 3. Update the customer's outstanding balance if customer_id exists
+      final customerId = bill['customer_id'];
+      if (customerId != null) {
+        final List<Map<String, dynamic>> custDataList = await txn.query('customers', where: 'id = ?', whereArgs: [customerId]);
+        if (custDataList.isNotEmpty) {
+          final cust = custDataList.first;
+          final double custOutstanding = (cust['outstanding_balance'] as num?)?.toDouble() ?? 0.0;
+          final double newCustOutstanding = custOutstanding - amountToSettle;
+          
+          await txn.update(
+            'customers',
+            {'outstanding_balance': newCustOutstanding < 0 ? 0.0 : newCustOutstanding},
+            where: 'id = ?',
+            whereArgs: [customerId],
+          );
+        }
+      }
+      
+      // Sync log for the bill update
+      await _logSyncAction(txn, 'bills', 'UPDATE', billId.toString(), {
+        'paid_amount': newPaid,
+        'due_amount': newDue,
+      });
+    });
+  }
+
   // ==========================
   // 10. UNITS CRUD
   // ==========================

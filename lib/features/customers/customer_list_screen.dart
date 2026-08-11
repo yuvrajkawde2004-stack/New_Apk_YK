@@ -142,16 +142,32 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           Expanded(
             child: _isLoading 
                 ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _filtered.length,
-                    itemBuilder: (_, i) => _CustomerCard(
-                    customer: _filtered[i], 
-                    index: i,
-                    onLongPress: () => _showCustomerOptionsBottomSheet(_filtered[i]),
-                  ),
-                  ),
+                : _filtered.isEmpty
+                    ? RefreshIndicator(
+                        onRefresh: () async => _loadCustomers(),
+                        color: AppColors.royalBlue,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          children: [
+                            SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                            Center(child: Text('No customers found', style: GoogleFonts.outfit(color: Colors.grey))),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async => _loadCustomers(),
+                        color: AppColors.royalBlue,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          itemCount: _filtered.length,
+                          itemBuilder: (_, i) => _CustomerCard(
+                            customer: _filtered[i], 
+                            index: i,
+                            onLongPress: () => _showCustomerOptionsBottomSheet(_filtered[i]),
+                          ),
+                        ),
+                      ),
           ),
         ],
       ),
@@ -597,6 +613,7 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
     return TextField(
       controller: controller,
       keyboardType: type,
+      textCapitalization: TextCapitalization.sentences,
       maxLength: isPhone ? 10 : null,
       inputFormatters: isPhone ? [
         FilteringTextInputFormatter.digitsOnly,

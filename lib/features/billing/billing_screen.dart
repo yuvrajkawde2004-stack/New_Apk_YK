@@ -37,7 +37,7 @@ class BillingScreen extends StatefulWidget {
 class _BillItem {
   final Product? product;
   String name;
-  int qty;
+  double qty;
   double price;
   final TextEditingController priceCtrl;
   final FocusNode priceFocusNode;
@@ -45,7 +45,7 @@ class _BillItem {
   _BillItem({
     this.product,
     required this.name,
-    this.qty = 1,
+    this.qty = 1.0,
     this.price = 0,
   })  : priceCtrl = TextEditingController(text: price > 0 ? price.toStringAsFixed(0) : ''),
         priceFocusNode = FocusNode();
@@ -68,7 +68,7 @@ class _BillingScreenState extends State<BillingScreen> {
   final TextEditingController _paidAmountCtrl = TextEditingController();
   bool _isManualPaidAmount = false;
 
-  final List<String> _paymentMethods = ['Cash', 'UPI', 'Card', 'Credit'];
+  final List<String> _paymentMethods = ['Cash', 'UPI'];
 
   List<Product> _dbProducts = [];
 
@@ -383,6 +383,17 @@ class _BillingScreenState extends State<BillingScreen> {
       }
     }
 
+    if (_selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a customer first.', style: GoogleFonts.outfit()),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -578,7 +589,7 @@ class _BillingScreenState extends State<BillingScreen> {
   }
 
   void _showUpiDialog(Map<String, dynamic> billData, String upiId, String upiName) {
-    final amount = billData['grand_total'];
+    final amount = billData['paid_amount'];
     final billNo = billData['bill_number'];
     final qrData = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(upiName)}&am=$amount&cu=INR&tn=$billNo';
     
@@ -754,7 +765,7 @@ class _BillingScreenState extends State<BillingScreen> {
                     child: TextButton(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        _showBillSuccessfulAnimationAndNavigate(billData);
+                        Navigator.pop(context);
                       },
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -900,7 +911,7 @@ class _BillingScreenState extends State<BillingScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             try {
-                              final image = await screenshotController.capture(pixelRatio: 2.0);
+                              final image = await screenshotController.capture(pixelRatio: 4.0);
                               if (image == null) return;
                               
                               final directory = await getTemporaryDirectory();
@@ -1083,6 +1094,7 @@ class _BillingScreenState extends State<BillingScreen> {
                     ),
                     child: TextField(
                       controller: _searchCtrl,
+                      textCapitalization: TextCapitalization.sentences,
                       onChanged: (_) => setState(() {}),
                       onSubmitted: (text) {
                         if (text.trim().isNotEmpty) {
@@ -1343,11 +1355,14 @@ class _BillingScreenState extends State<BillingScreen> {
                                               _qtyBtn(Icons.remove_rounded, () {
                                                 setState(() { if (item.qty > 1) item.qty--; else _items.removeAt(i); });
                                               }),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                                alignment: Alignment.center,
-                                                child: Text('${item.qty} ${item.product?.unit ?? 'PCS'}', 
-                                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 16, color: const Color(0xFF0F172A))),
+                                              GestureDetector(
+                                                onTap: () => _showQuantityDialog(item),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                  alignment: Alignment.center,
+                                                  child: Text('${item.qty % 1 == 0 ? item.qty.toInt() : item.qty} ${item.product?.unit ?? 'PCS'}', 
+                                                    style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 16, color: const Color(0xFF0F172A))),
+                                                ),
                                               ),
                                               _qtyBtn(Icons.add_rounded, () => setState(() => item.qty++)),
                                             ],
@@ -1550,6 +1565,52 @@ class _BillingScreenState extends State<BillingScreen> {
         color: Colors.transparent,
         child: Icon(icon, size: 20, color: const Color(0xFF64748B)),
       ),
+    );
+  }
+  Future<void> _showQuantityDialog(_BillItem item) async {
+    final TextEditingController qtyCtrl = TextEditingController(
+      text: item.qty % 1 == 0 ? item.qty.toInt().toString() : item.qty.toString()
+    );
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Enter Quantity', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: qtyCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'e.g. 1.5',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              suffixText: item.product?.unit ?? 'PCS',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final double? parsed = double.tryParse(qtyCtrl.text);
+                if (parsed != null && parsed > 0) {
+                  setState(() {
+                    item.qty = parsed;
+                  });
+                  Navigator.pop(ctx);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.royalBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Save', style: GoogleFonts.outfit(color: Colors.white)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

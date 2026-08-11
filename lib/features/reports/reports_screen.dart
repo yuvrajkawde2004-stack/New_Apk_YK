@@ -89,10 +89,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
         iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(18),
-          physics: const BouncingScrollPhysics(),
-          child: Column(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            setState(() {});
+          },
+          color: AppColors.royalBlue,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(18),
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Period Selector Tabs
@@ -513,6 +518,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

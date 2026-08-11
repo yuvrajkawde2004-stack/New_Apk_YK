@@ -17,7 +17,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
-  final _mrpController = TextEditingController();
   final _purchaseController = TextEditingController();
   final _stockController = TextEditingController();
   final _barcodeController = TextEditingController();
@@ -60,7 +59,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
   void dispose() {
     _nameController.dispose();
     _brandController.dispose();
-    _mrpController.dispose();
     _purchaseController.dispose();
     _stockController.dispose();
     _barcodeController.dispose();
@@ -217,16 +215,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   children: [
                     Expanded(
                       child: _field(
-                          controller: _mrpController,
-                          label: 'MRP (₹)',
-                          icon: Icons.currency_rupee,
-                          keyboardType: TextInputType.number),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _field(
                           controller: _purchaseController,
-                          label: 'Purchase ₹',
+                          label: 'Purchase Rate (₹)',
                           icon: Icons.shopping_bag_rounded,
                           keyboardType: TextInputType.number),
                     ),
@@ -324,6 +314,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      textCapitalization: TextCapitalization.sentences,
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
@@ -393,6 +384,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         return TextFormField(
           controller: textEditingController,
           focusNode: focusNode,
+          textCapitalization: TextCapitalization.characters,
           decoration: InputDecoration(
             labelText: 'Unit',
             prefixIcon: const Icon(Icons.straighten_rounded, color: AppColors.royalBlue, size: 20),

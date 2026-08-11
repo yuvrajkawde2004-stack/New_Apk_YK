@@ -1,12 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/services/ledger_pdf_service.dart';
 import '../dashboard/providers/dashboard_provider.dart';
+import 'add_purchase_screen.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -158,46 +163,7 @@ class _InventoryScreenState extends State<InventoryScreen>
             ),
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.2), shape: BoxShape.circle),
-                              child: const Icon(Icons.trending_up_rounded, color: Color(0xFF10B981), size: 16),
-                            ),
-                            const SizedBox(width: 8),
-                            Text('Est. Net Profit', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text('₹${fmt.format(totalEstimatedProfit)}', style: GoogleFonts.outfit(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF10B981), width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.auto_graph_rounded, color: Color(0xFF10B981), size: 14),
-                          const SizedBox(width: 4),
-                          Text('Avg ${avgProfitMarginPct.toStringAsFixed(1)}% Margin', style: GoogleFonts.outfit(color: const Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 11)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                const Divider(color: Colors.white12, height: 1),
+                // Only show mini stats
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -634,13 +600,12 @@ class _InventoryScreenState extends State<InventoryScreen>
   }
 
   void _showAddPurchaseSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _AddPurchaseSheet(
-        suppliers: _suppliers,
-        onSaved: _loadAllData,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPurchaseScreen(
+          onSaved: _loadAllData,
+        ),
       ),
     );
   }
@@ -756,6 +721,51 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
     widget.onUpdate();
   }
 
+  Future<void> _downloadLedgerPdf() async {
+    try {
+      final List<Map<String, dynamic>> allTrans = [];
+
+      for (var p in _purchases) {
+        allTrans.add({
+          'date': p['purchase_date']?.toString().substring(0, 10) ?? '',
+          'description': 'Purchase (${p['product_name'] ?? 'Item'})',
+          'amount': (p['total_amount'] as num?)?.toDouble() ?? 0.0,
+          'is_credit': false,
+        });
+      }
+
+      for (var p in _payments) {
+        allTrans.add({
+          'date': p['payment_date']?.toString().substring(0, 10) ?? '',
+          'description': 'Payment Sent (${p['payment_method'] ?? 'Cash'})',
+          'amount': (p['amount_paid'] as num?)?.toDouble() ?? 0.0,
+          'is_credit': true,
+        });
+      }
+
+      allTrans.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
+
+      final pdfBytes = await LedgerPdfService.generateLedgerPdf(
+        title: 'Supplier Ledger Statement',
+        partyName: _currentSupplier['name'] ?? '',
+        phone: _currentSupplier['phone'] ?? '',
+        totalOutstanding: (_currentSupplier['outstanding_due'] as num?)?.toDouble() ?? 0.0,
+        transactions: allTrans,
+      );
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/${_currentSupplier['name'].toString().replaceAll(' ', '_')}_Ledger.pdf');
+      await file.writeAsBytes(pdfBytes);
+
+      await Share.shareXFiles([XFile(file.path)], text: 'Ledger Statement for ${_currentSupplier['name']}');
+    } catch (e) {
+      debugPrint('Error generating PDF: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating PDF: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final fmt = NumberFormat('#,##,##0.00');
@@ -841,18 +851,24 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: due > 0 ? Colors.red.withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: due > 0 ? Colors.redAccent.withValues(alpha: 0.5) : Colors.greenAccent.withValues(alpha: 0.5)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: due > 0 ? Colors.red.withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: due > 0 ? Colors.redAccent.withValues(alpha: 0.5) : Colors.greenAccent.withValues(alpha: 0.5)),
+                            ),
+                            child: Text(
+                              due > 0 ? 'DUE' : 'CLEARED',
+                              style: GoogleFonts.outfit(color: due > 0 ? Colors.redAccent : Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          child: Text(
-                            due > 0 ? 'DUE' : 'CLEARED',
-                            style: GoogleFonts.outfit(color: due > 0 ? Colors.redAccent : Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white70),
+                            onPressed: _downloadLedgerPdf,
+                            tooltip: 'Download Ledger PDF',
                           ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
@@ -1111,7 +1127,6 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
     final qtyCtrl = TextEditingController(text: '1');
     final paidCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
-    final sellCtrl = TextEditingController();
     final lowStockCtrl = TextEditingController(text: '5');
     String selectedUnit = 'PCS';
     final units = ['PCS', 'PAIR', 'KG', 'G', 'MTR', 'ROLL', 'BOX', 'PACK', 'SET', 'DOZ', 'LTR', 'ML'];
@@ -1140,14 +1155,6 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
                         controller: rateCtrl,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(labelText: 'Buy Rate (₹)', prefixText: '₹ ', border: OutlineInputBorder()),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: sellCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Selling Price (MRP)', prefixText: '₹ ', border: OutlineInputBorder()),
                       ),
                     ),
                   ],
@@ -1208,7 +1215,7 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
               onPressed: () async {
                 final prod = prodCtrl.text.trim();
                 final rate = double.tryParse(rateCtrl.text) ?? 0.0;
-                final sell = double.tryParse(sellCtrl.text) ?? 0.0;
+                final sell = 0.0;
                 final qty = int.tryParse(qtyCtrl.text) ?? 0;
                 final paid = double.tryParse(paidCtrl.text) ?? 0.0;
                 final lowStock = int.tryParse(lowStockCtrl.text) ?? 5;
@@ -1250,191 +1257,6 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
 }
 
 // -----------------------------------------------------------------------------
-// ADD NEW PURCHASE SHEET
-// -----------------------------------------------------------------------------
-class _AddPurchaseSheet extends StatefulWidget {
-  final List<Map<String, dynamic>> suppliers;
-  final VoidCallback onSaved;
-
-  const _AddPurchaseSheet({required this.suppliers, required this.onSaved});
-
-  @override
-  State<_AddPurchaseSheet> createState() => _AddPurchaseSheetState();
-}
-
-class _AddPurchaseSheetState extends State<_AddPurchaseSheet> {
-  final _prodCtrl = TextEditingController();
-  final _supCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _rateCtrl = TextEditingController();
-  final _qtyCtrl = TextEditingController(text: '1');
-  final _paidCtrl = TextEditingController();
-  final _noteCtrl = TextEditingController();
-  String? _selectedSupplierName;
-  bool _saving = false;
-  String _selectedUnit = 'PCS';
-  final List<String> _units = ['PCS', 'PAIR', 'KG', 'G', 'MTR', 'ROLL', 'BOX', 'PACK', 'SET', 'DOZ', 'LTR', 'ML'];
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.suppliers.isNotEmpty) {
-      _selectedSupplierName = widget.suppliers.first['name'];
-      _supCtrl.text = _selectedSupplierName!;
-      _phoneCtrl.text = (widget.suppliers.first['phone'] ?? '').toString().replaceAll('+91 ', '').replaceAll('+91', '');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 14),
-            Text('Record New Stock Purchase', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-
-            // Step 1: Select or Add Supplier FIRST
-            if (widget.suppliers.isNotEmpty) ...[
-              DropdownButtonFormField<String>(
-                value: _selectedSupplierName,
-                decoration: const InputDecoration(labelText: '1. Select Supplier', border: OutlineInputBorder()),
-                items: widget.suppliers.map((s) {
-                  final name = s['name'].toString();
-                  return DropdownMenuItem(value: name, child: Text(name));
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _selectedSupplierName = val;
-                      _supCtrl.text = val;
-                      final match = widget.suppliers.firstWhere((s) => s['name'] == val, orElse: () => {});
-                      _phoneCtrl.text = (match['phone'] ?? '').toString().replaceAll('+91 ', '').replaceAll('+91', '');
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 10),
-            ] else ...[
-              TextField(
-                controller: _supCtrl,
-                decoration: const InputDecoration(labelText: '1. Supplier Name (e.g. Surat Textiles)', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 10),
-            ],
-
-            TextField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              maxLength: 10,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Supplier Mobile (+91)',
-                prefixText: '+91 ',
-                prefixStyle: TextStyle(fontWeight: FontWeight.bold),
-                counterText: '',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Step 2: Product & Rate
-            TextField(controller: _prodCtrl, decoration: const InputDecoration(labelText: '2. Product Name (e.g. Cotton Shirt)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-
-            Row(
-              children: [
-                Expanded(flex: 2, child: TextField(controller: _rateCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Buy Price (₹)', prefixText: '₹ ', border: OutlineInputBorder()))),
-                const SizedBox(width: 8),
-                Expanded(flex: 1, child: TextField(controller: _qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Qty', border: OutlineInputBorder()))),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedUnit,
-                    decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
-                    items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                    onChanged: (val) => setState(() => _selectedUnit = val ?? 'PCS'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            TextField(controller: _paidCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount Paid Now (₹)', prefixText: '₹ ', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _noteCtrl, decoration: const InputDecoration(labelText: 'Notes (optional)', border: OutlineInputBorder())),
-
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _savePurchase,
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                child: _saving ? const CircularProgressIndicator(color: Colors.white) : Text('Save Purchase Record', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _savePurchase() async {
-    final prod = _prodCtrl.text.trim();
-    final sup = _supCtrl.text.trim();
-    final rate = double.tryParse(_rateCtrl.text) ?? 0.0;
-    final qty = int.tryParse(_qtyCtrl.text) ?? 0;
-    final paid = double.tryParse(_paidCtrl.text) ?? 0.0;
-    final rawPhone = _phoneCtrl.text.trim();
-
-    if (prod.isEmpty || sup.isEmpty || rate <= 0 || qty <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill Supplier Name, Product Name, Price and Quantity.')));
-      return;
-    }
-
-    if (rawPhone.isNotEmpty && rawPhone.length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Supplier mobile number must be 10 digits (+91 followed by 10 digits)')));
-      return;
-    }
-
-    final phoneVal = rawPhone.isEmpty ? '' : (rawPhone.startsWith('+91') ? rawPhone : '+91 $rawPhone');
-    setState(() => _saving = true);
-    try {
-      await DatabaseHelper.instance.recordPurchase(
-        productName: prod,
-        supplierName: sup,
-        purchaseRate: rate,
-        quantity: qty,
-        paidAmount: paid,
-        supplierPhone: phoneVal,
-        notes: _noteCtrl.text.trim(),
-        unit: _selectedUnit,
-      );
-
-      if (mounted) {
-        Navigator.pop(context);
-        widget.onSaved();
-        Provider.of<DashboardProvider>(context, listen: false).refreshDashboard();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Purchase recorded! Stock updated for "$prod"'), backgroundColor: AppColors.emeraldGreen),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error saving purchase: $e'), backgroundColor: Colors.redAccent),
         );
       }

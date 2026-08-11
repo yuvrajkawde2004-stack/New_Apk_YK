@@ -200,15 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'English (Default)',
                   onTap: () {},
                 ),
-                _divider(),
-                _switchTile(
-                  icon: Icons.notifications_rounded,
-                  color: const Color(0xFFEA580C),
-                  title: 'Smart Notifications',
-                  subtitle: 'Low stock alerts & payment reminders',
-                  value: _notifications,
-                  onChanged: (v) => setState(() => _notifications = v),
-                ),
+
               ]),
 
               const SizedBox(height: 20),

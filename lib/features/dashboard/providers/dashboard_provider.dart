@@ -55,7 +55,7 @@ class DashboardProvider extends ChangeNotifier {
         _totalProducts = await db.getTotalProductsCount();
         _totalBills = await db.getTotalBills();
         _pendingPayments = await db.getTotalOutstandingAmount();
-        _recentBills = await db.getRecentBills();
+        _recentBills = await db.getRecentBillsWithItems();
       }
 
       // Sync with Cloudflare D1 Remote Database if available
