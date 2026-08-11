@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/services/ledger_pdf_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import 'add_purchase_screen.dart';
 
@@ -502,8 +503,8 @@ class _InventoryScreenState extends State<InventoryScreen>
                     );
                   },
                 ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
