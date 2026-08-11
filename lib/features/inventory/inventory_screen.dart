@@ -1257,12 +1257,7 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
 }
 
 // -----------------------------------------------------------------------------
-          SnackBar(content: Text('Error saving purchase: $e'), backgroundColor: Colors.redAccent),
-        );
-      }
-    }
-  }
-}
+
 
 // -----------------------------------------------------------------------------
 // ADD NEW SUPPLIER SHEET

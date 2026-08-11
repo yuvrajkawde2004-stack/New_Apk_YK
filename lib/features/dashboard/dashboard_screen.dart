@@ -451,7 +451,7 @@ class _HomeTab extends StatelessWidget {
 
   void _showAverageProfitModal(BuildContext context) async {
     final stats = await DatabaseHelper.instance.getAverageProfitStats();
-    if (!mounted) return;
+    if (!context.mounted) return;
     
     showDialog(
       context: context,

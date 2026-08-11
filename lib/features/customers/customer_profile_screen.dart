@@ -398,7 +398,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       final List<Map<String, dynamic>> allTrans = [];
 
       // Add bills
-      for (var b in _bills) {
+      for (var b in _customerBills) {
         allTrans.add({
           'date': b['bill_date']?.toString().substring(0, 10) ?? '',
           'description': 'Bill #${b['id']}',
@@ -408,7 +408,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       }
 
       // Add payments
-      for (var p in _payments) {
+      for (var p in _customerPayments) {
         allTrans.add({
           'date': p['payment_date']?.toString().substring(0, 10) ?? '',
           'description': 'Payment Received (${p['payment_method'] ?? 'Cash'})',
@@ -423,7 +423,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       final pdfBytes = await LedgerPdfService.generateLedgerPdf(
         title: 'Customer Ledger Statement',
         partyName: widget.customer.name,
-        phone: widget.customer.phone,
+        phone: widget.customer.phone ?? '',
         totalOutstanding: _currentOutstanding,
         transactions: allTrans,
       );
@@ -1198,7 +1198,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         },
       ),
     );
-    void _showUpiDialogForOutstanding(double amount, int billId, String upiId, String upiName, DateTime paymentDate) {
+  }
+
+  void _showUpiDialogForOutstanding(double amount, int billId, String upiId, String upiName, DateTime paymentDate) {
     final qrData = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(upiName)}&am=$amount&cu=INR';
     
     showModalBottomSheet(
@@ -1337,8 +1339,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       ),
     );
   }
-
-}
 
   void _showSettleDuesSheet() {
     final pendingBills = _customerBills.where((b) {
