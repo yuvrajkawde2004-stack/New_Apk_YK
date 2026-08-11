@@ -46,7 +46,7 @@ class _ShopProfileModalState extends State<ShopProfileModal> {
     // Save to DB for Cloud Sync
     await DatabaseHelper.instance.saveShopSettings({
       'shop_name': name,
-      'shop_gstin': _gstinController.text.trim(),
+      'gst_number': _gstinController.text.trim(),
       'address': _addressController.text.trim(),
       'mobile': _phoneController.text.trim(),
     });
