@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/database/database_helper.dart';
 
 class UPISettingsScreen extends StatefulWidget {
   const UPISettingsScreen({super.key});
@@ -53,11 +54,17 @@ class _UPISettingsScreenState extends State<UPISettingsScreen> {
     await prefs.setString('upi_id', _upiIdController.text.trim());
     await prefs.setString('upi_name', _upiNameController.text.trim());
     
+    // Save to DB for Cloud Sync
+    await DatabaseHelper.instance.saveShopSettings({
+      'upi_id': _upiIdController.text.trim(),
+      'upi_name': _upiNameController.text.trim(),
+    });
+    
     if (mounted) {
       setState(() => _hasUnsavedChanges = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('UPI Settings Saved successfully!'), backgroundColor: AppColors.emeraldGreen),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('UPI Settings Saved successfully!'), backgroundColor: AppColors.emeraldGreen),
+      // );
     }
   }
 

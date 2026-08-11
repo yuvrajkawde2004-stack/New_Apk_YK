@@ -40,7 +40,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 16,
+      version: 17,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -63,6 +63,24 @@ class DatabaseHelper {
           updated_at TEXT
         )
       ''');
+    }
+    
+    if (oldVersion < 17) {
+      // Clear old data as requested by user
+      await db.execute('DROP TABLE IF EXISTS products');
+      await db.execute('DROP TABLE IF EXISTS customers');
+      await db.execute('DROP TABLE IF EXISTS bills');
+      await db.execute('DROP TABLE IF EXISTS bill_items');
+      await db.execute('DROP TABLE IF EXISTS purchases');
+      await db.execute('DROP TABLE IF EXISTS shop_settings');
+      await db.execute('DROP TABLE IF EXISTS suppliers');
+      await db.execute('DROP TABLE IF EXISTS supplier_payments');
+      await db.execute('DROP TABLE IF EXISTS customer_payments');
+      await db.execute('DROP TABLE IF EXISTS sync_logs');
+      await db.execute('DROP TABLE IF EXISTS units');
+      
+      // Recreate all tables
+      await _createDatabase(db, newVersion);
     }
     
     if (oldVersion < 3) {
@@ -1704,7 +1722,24 @@ class DatabaseHelper {
   }
 
   // ==========================
-  // 10. UNITS CRUD
+  // 10. SHOP SETTINGS (For Cloud Sync)
+  // ==========================
+
+  Future<void> saveShopSettings(Map<String, dynamic> settings) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final existing = await txn.query('shop_settings', limit: 1);
+      if (existing.isEmpty) {
+        await txn.insert('shop_settings', settings);
+      } else {
+        await txn.update('shop_settings', settings, where: 'id = ?', whereArgs: [existing.first['id']]);
+      }
+      await _logSyncAction(txn, 'shop_settings', existing.isEmpty ? 'INSERT' : 'UPDATE', '1', settings);
+    });
+  }
+
+  // ==========================
+  // 11. UNITS CRUD
   // ==========================
 
   Future<List<String>> getUnits() async {

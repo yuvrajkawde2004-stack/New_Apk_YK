@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/database/database_helper.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 
 class ShopProfileModal extends StatefulWidget {
@@ -41,6 +42,14 @@ class _ShopProfileModalState extends State<ShopProfileModal> {
     await prefs.setString('shop_gstin', _gstinController.text.trim());
     await prefs.setString('shop_address', _addressController.text.trim());
     await prefs.setString('shop_phone', _phoneController.text.trim());
+
+    // Save to DB for Cloud Sync
+    await DatabaseHelper.instance.saveShopSettings({
+      'shop_name': name,
+      'shop_gstin': _gstinController.text.trim(),
+      'address': _addressController.text.trim(),
+      'mobile': _phoneController.text.trim(),
+    });
 
     if (!mounted) return;
     Provider.of<DashboardProvider>(context, listen: false).updateShopName(name);

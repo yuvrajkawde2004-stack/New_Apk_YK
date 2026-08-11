@@ -96,21 +96,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 12),
-              Text('Product saved successfully!'),
-            ],
-          ),
-          backgroundColor: AppColors.emeraldGreen,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: const Row(
+      //       children: [
+      //         Icon(Icons.check_circle, color: Colors.white),
+      //         SizedBox(width: 12),
+      //         Text('Product saved successfully!'),
+      //       ],
+      //     ),
+      //     backgroundColor: AppColors.emeraldGreen,
+      //     behavior: SnackBarBehavior.floating,
+      //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      //     margin: const EdgeInsets.all(16),
+      //   ),
+      // );
       Navigator.pop(context);
     } catch (e) {
       if (mounted) {

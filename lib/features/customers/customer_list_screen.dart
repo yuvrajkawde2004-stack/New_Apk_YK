@@ -330,9 +330,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               if (mounted) {
                 Navigator.pop(ctx);
                 _loadCustomers();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Customer updated successfully!'), backgroundColor: AppColors.emeraldGreen),
-                );
+                // ScaffoldMessenger.of(context).showSnackBar(
+                //   const SnackBar(content: Text('Customer updated successfully!'), backgroundColor: AppColors.emeraldGreen),
+                // );
               }
             },
             child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
@@ -558,9 +558,9 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
       if (mounted) {
         widget.onSaved();
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Customer added successfully!'), backgroundColor: AppColors.emeraldGreen),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(content: Text('Customer added successfully!'), backgroundColor: AppColors.emeraldGreen),
+        // );
       }
     } catch (e) {
       if (mounted) {

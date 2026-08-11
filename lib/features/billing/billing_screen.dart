@@ -371,6 +371,42 @@ class _BillingScreenState extends State<BillingScreen> {
     });
   }
 
+  void _showTopError(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+              child: const Icon(Icons.error_outline_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: (MediaQuery.of(context).size.height - 160).clamp(0.0, 9999.0),
+          left: 20,
+          right: 20,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 8,
+        duration: const Duration(seconds: 3),
+        dismissDirection: DismissDirection.up,
+      ),
+    );
+  }
+
   Future<void> _processPayment() async {
     // If cart is empty but user typed a product in search bar, auto add it!
     if (_items.isEmpty && _searchCtrl.text.trim().isNotEmpty) {
@@ -384,36 +420,18 @@ class _BillingScreenState extends State<BillingScreen> {
     }
 
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select a customer first.', style: GoogleFonts.outfit()),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showTopError('Please select a customer first.');
       return;
     }
 
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select or type a product for the bill', style: GoogleFonts.outfit()),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showTopError('Please select or type a product for the bill.');
       return;
     }
     
     // Validate if any item has 0 price
     if (_items.any((i) => i.price <= 0)) {
-       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please enter item price.', style: GoogleFonts.outfit()),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+       _showTopError('Please enter item price.');
       return;
     }
 

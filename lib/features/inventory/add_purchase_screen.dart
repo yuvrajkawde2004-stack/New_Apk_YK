@@ -312,7 +312,9 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
           supId = await txn.insert('suppliers', {
             'name': sup,
             'phone': phoneVal,
-            'outstanding_balance': 0.0,
+            'total_purchased': 0.0,
+            'total_paid': 0.0,
+            'outstanding_due': 0.0,
             'created_at': DateTime.now().toIso8601String(),
           });
         } else {
@@ -330,13 +332,14 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
           final nowStr = DateTime.now().toIso8601String();
           
           await txn.insert('purchases', {
+            'product_id': 0,
             'product_name': pName,
             'supplier_name': sup,
             'purchase_rate': rate,
-            'selling_price': 0.0, // Selling price removed
             'quantity': qty,
-            'paid_amount': 0.0, // We will handle total payment below
-            'unit': item.unit,
+            'total_amount': rate * qty,
+            'paid_amount': 0.0,
+            'due_amount': 0.0,
             'purchase_date': nowStr,
             'notes': _noteCtrl.text.trim(),
             'created_at': nowStr,
@@ -345,11 +348,11 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
           // Update Stock
           final existingProd = await txn.query('products', where: 'product_name = ?', whereArgs: [pName]);
           if (existingProd.isNotEmpty) {
-            final currentQty = (existingProd.first['stock_quantity'] as num?)?.toInt() ?? 0;
+            final currentQty = (existingProd.first['quantity'] as num?)?.toInt() ?? 0;
             await txn.update(
               'products',
               {
-                'stock_quantity': currentQty + qty,
+                'quantity': currentQty + qty,
                 'purchase_rate': rate,
                 // Do not override selling price if they set it elsewhere
                 'supplier_name': sup,
@@ -362,9 +365,8 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
             await txn.insert('products', {
               'product_name': pName,
               'category': 'General',
-              'stock_quantity': qty,
+              'quantity': qty,
               'purchase_rate': rate,
-              'selling_price': 0.0,
               'supplier_name': sup,
               'unit': item.unit,
               'low_stock_limit': item.lowStock,
@@ -377,18 +379,25 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
         final dueAmount = totalPurchaseValue - paid;
         
         // Update outstanding balance
-        if (dueAmount != 0) {
-          final supData = await txn.query('suppliers', where: 'id = ?', whereArgs: [supId]);
-          if (supData.isNotEmpty) {
-            double currentOutstanding = (supData.first['outstanding_balance'] as num?)?.toDouble() ?? 0.0;
-            currentOutstanding += dueAmount;
-            await txn.update(
-              'suppliers',
-              {'outstanding_balance': currentOutstanding},
-              where: 'id = ?',
-              whereArgs: [supId],
-            );
-          }
+        final supData = await txn.query('suppliers', where: 'id = ?', whereArgs: [supId]);
+        if (supData.isNotEmpty) {
+          double curPurchased = (supData.first['total_purchased'] as num?)?.toDouble() ?? 0.0;
+          double curPaid = (supData.first['total_paid'] as num?)?.toDouble() ?? 0.0;
+          
+          final newPurchased = curPurchased + totalPurchaseValue;
+          final newPaid = curPaid + paid;
+          final newDue = (newPurchased - newPaid) > 0 ? (newPurchased - newPaid) : 0.0;
+
+          await txn.update(
+            'suppliers',
+            {
+              'total_purchased': newPurchased,
+              'total_paid': newPaid,
+              'outstanding_due': newDue
+            },
+            where: 'id = ?',
+            whereArgs: [supId],
+          );
         }
         
         // 4. Add SINGLE Payment Log
@@ -407,10 +416,10 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
       
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${_items.length} Product(s) added successfully!'),
-          backgroundColor: Colors.green,
-        ));
+        // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        //   content: Text('${_items.length} Product(s) added successfully!'),
+        //   backgroundColor: Colors.green,
+        // ));
       }
     } catch (e) {
       if (mounted) {

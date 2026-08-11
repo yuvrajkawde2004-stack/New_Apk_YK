@@ -1095,12 +1095,12 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
                   'total_spent': 0.0,
                 });
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Customer "${_nameController.text}" added successfully!'),
-                      backgroundColor: AppColors.emeraldGreen,
-                    ),
-                  );
+                  // ScaffoldMessenger.of(context).showSnackBar(
+                  //   SnackBar(
+                  //     content: Text('Customer "${_nameController.text}" added successfully!'),
+                  //     backgroundColor: AppColors.emeraldGreen,
+                  //   ),
+                  // );
                   Navigator.pop(context);
                 }
               } catch (e) {
