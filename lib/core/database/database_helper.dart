@@ -1607,6 +1607,11 @@ class DatabaseHelper {
     return await db.query('supplier_payments', where: 'supplier_name = ?', whereArgs: [supplierName], orderBy: 'id DESC');
   }
 
+  Future<List<Map<String, dynamic>>> getCustomerPayments(int customerId) async {
+    final db = await database;
+    return await db.query('customer_payments', where: 'customer_id = ?', whereArgs: [customerId], orderBy: 'payment_date DESC');
+  }
+
   Future<List<Map<String, dynamic>>> getProductProfitBreakdown() async {
     final db = await database;
     return await db.rawQuery('''

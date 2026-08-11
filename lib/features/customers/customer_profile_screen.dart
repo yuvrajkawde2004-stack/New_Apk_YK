@@ -29,6 +29,7 @@ class CustomerProfileScreen extends StatefulWidget {
 
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   List<Map<String, dynamic>> _customerBills = [];
+  List<Map<String, dynamic>> _customerPayments = [];
   bool _isLoading = true;
   double _currentOutstanding = 0.0;
 
@@ -55,11 +56,18 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         }
       }
 
-      setState(() {
-        _customerBills = bills;
-        _currentOutstanding = updatedOutstanding;
-        _isLoading = false;
-      });
+      final payments = await DatabaseHelper.instance.getCustomerPayments(
+        widget.customer.id ?? 0,
+      );
+
+      if (mounted) {
+        setState(() {
+          _customerBills = bills;
+          _customerPayments = payments;
+          _currentOutstanding = updatedOutstanding;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
