@@ -320,6 +320,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -519,10 +520,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ],
         ),
       ),
-    ),
-  ),
-);
-}
+    );
+  }
 
   Widget _miniMetricCard(String title, double val, String sub, IconData icon, Color color, Color bg) {
     return Container(
