@@ -711,41 +711,41 @@ class _BillingScreenState extends State<BillingScreen> {
                 alignment: Alignment.center,
                 children: [
                   // Outer Glow / Border
-                  Container(
-                    width: 240,
-                    height: 240,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(color: AppColors.royalBlue.withOpacity(0.15), blurRadius: 30, spreadRadius: 5),
-                        BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.1), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 10)),
-                      ],
-                      border: Border.all(color: AppColors.royalBlue.withOpacity(0.1), width: 2),
-                    ),
-                    padding: const EdgeInsets.all(20),
-                    child: QrImageView(
-                      data: qrData,
-                      version: QrVersions.auto,
-                      backgroundColor: Colors.white,
-                      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
-                      dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.circle, color: Color(0xFF1E293B)),
+                  RepaintBoundary(
+                    child: Container(
+                      width: 240,
+                      height: 240,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(color: AppColors.royalBlue.withOpacity(0.15), blurRadius: 30, spreadRadius: 5),
+                          BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.1), blurRadius: 20, spreadRadius: 2, offset: const Offset(0, 10)),
+                        ],
+                        border: Border.all(color: AppColors.royalBlue.withOpacity(0.1), width: 2),
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      child: QrImageView(
+                        data: qrData,
+                        version: QrVersions.auto,
+                        backgroundColor: Colors.white,
+                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
+                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.circle, color: Color(0xFF1E293B)),
+                      ),
                     ),
                   ),
                   // Scanner Laser Animation
                   Positioned(
                     top: 20,
-                    child: Container(
-                      width: 200,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: AppColors.emeraldGreen,
-                        boxShadow: [
-                          BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.6), blurRadius: 10, spreadRadius: 3),
-                        ],
-                      ),
-                    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                     .moveY(begin: 0, end: 200, duration: 2000.ms, curve: Curves.easeInOutSine),
+                    child: RepaintBoundary(
+                      child: Container(
+                        width: 200, height: 3,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Colors.transparent, AppColors.emeraldGreen, Colors.transparent]),
+                          boxShadow: [BoxShadow(color: AppColors.emeraldGreen.withOpacity(0.6), blurRadius: 8, spreadRadius: 2)],
+                        ),
+                      ).animate(onPlay: (controller) => controller.repeat(reverse: true)).slideY(begin: 0, end: 66, duration: 2.seconds, curve: Curves.easeInOut),
+                    ),
                   ),
                 ],
               ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
@@ -1421,18 +1421,16 @@ class _BillingScreenState extends State<BillingScreen> {
                   ],
                 ),
 
-                // 🧾 Premium Footer
-                ClipRRect(
+            // 🧾 Premium Footer
+            ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    border: Border(top: BorderSide(color: Colors.white.withOpacity(0.4), width: 1.5)),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, -8))],
-                  ),
-                  child: SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1.5)),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, -8))],
+                ),
+                child: SafeArea(
                     top: false,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),

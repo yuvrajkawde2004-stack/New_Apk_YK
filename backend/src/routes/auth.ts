@@ -81,7 +81,7 @@ authApp.post('/send-otp', async (c) => {
 authApp.post('/verify-otp', async (c) => {
   try {
     const body = await c.req.json();
-    const { target, code } = body;
+    const { target, code, name } = body;
 
     const result = await c.env.DB.prepare(
       `SELECT * FROM otps WHERE identifier = ? AND otp_code = ? ORDER BY created_at DESC LIMIT 1`
@@ -105,12 +105,14 @@ authApp.post('/verify-otp', async (c) => {
     if (!user) {
       const userId = crypto.randomUUID();
       const isEmail = target.includes('@');
+      const insertMobile = isEmail ? null : target;
+      const insertEmail = isEmail ? target : null;
 
       await c.env.DB.prepare(
-        `INSERT INTO users (user_id, ${isEmail ? 'email' : 'mobile'}) VALUES (?, ?)`
-      ).bind(userId, target).run();
+        `INSERT INTO users (user_id, mobile, email, name) VALUES (?, ?, ?, ?)`
+      ).bind(userId, insertMobile, insertEmail, name || null).run();
 
-      user = { user_id: userId, mobile: !isEmail ? target : null, email: isEmail ? target : null };
+      user = { user_id: userId, mobile: insertMobile, email: insertEmail, name: name || null };
     }
 
     // Check if user owns a shop, get the first shop ID as default

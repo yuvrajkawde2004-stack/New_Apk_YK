@@ -140,6 +140,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
 
       if (account != null) {
         final email = account.email;
+        final name = account.displayName;
         
         setState(() => _isLoading = true);
         try {
@@ -155,7 +156,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
             final verifyResponse = await http.post(
               Uri.parse('https://retailflow-backend.retailflow-backend.workers.dev/api/auth/verify-otp'),
               headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({'target': email, 'code': debugOtp}),
+              body: jsonEncode({'target': email, 'code': debugOtp, 'name': name}),
             );
             final verifyData = jsonDecode(verifyResponse.body);
             if (verifyData['success'] == true && verifyData['token'] != null) {
