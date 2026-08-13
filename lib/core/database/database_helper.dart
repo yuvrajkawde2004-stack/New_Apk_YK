@@ -1237,6 +1237,21 @@ class DatabaseHelper {
     return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
+  Future<double> getSalesForDate(String dateStr) async {
+    final db = await database;
+
+    final result = await db.rawQuery(
+      '''
+    SELECT SUM(grand_total) as total
+    FROM bills
+    WHERE bill_date LIKE ?
+    ''',
+      ['$dateStr%'],
+    );
+
+    return (result.first['total'] as num?)?.toDouble() ?? 0;
+  }
+
   Future<double> getMonthlySales() async {
     final db = await database;
 
