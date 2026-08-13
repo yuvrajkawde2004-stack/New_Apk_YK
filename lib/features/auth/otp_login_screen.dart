@@ -74,12 +74,12 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to connect to backend server.'),
-            backgroundColor: Colors.redAccent,
+            content: Text('Offline mode: Backend sync unavailable.'),
+            backgroundColor: Colors.orangeAccent,
           ),
         );
       }
-      return;
+      // Removed return; to allow offline login
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -189,12 +189,12 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Failed to connect to backend server.'),
-                backgroundColor: Colors.redAccent,
+                content: Text('Offline mode: Backend sync unavailable.'),
+                backgroundColor: Colors.orangeAccent,
               ),
             );
           }
-          return;
+          // Removed return; to allow offline login
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
