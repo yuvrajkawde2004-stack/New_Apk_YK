@@ -138,7 +138,7 @@ class InvoiceTemplateClassicWhite extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.black, thickness: 1)),
+              border: Border(bottom: BorderSide(color: Colors.black, width: 1.0)),
             ),
             child: Row(
               children: [
