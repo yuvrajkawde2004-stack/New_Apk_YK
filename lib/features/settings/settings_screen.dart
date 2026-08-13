@@ -22,7 +22,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _pinLock = false;
   bool _notifications = true;
-  String _selectedTemplate = 'Executive Black & Gold';
+  String _selectedTemplate = 'Classic White';
 
   @override
   void initState() {
@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _selectedTemplate = prefs.getString('invoice_template') ?? 'Executive Black & Gold';
+      _selectedTemplate = prefs.getString('invoice_template') ?? 'Classic White';
     });
   }
 
@@ -615,11 +615,11 @@ class _PremiumInvoiceStudioSheetState extends State<_PremiumInvoiceStudioSheet> 
   late String _selected;
 
   final List<String> _templates = [
-    'Executive Black & Gold',
+    'Classic White',
+    'Premium White',
     'Minimal Corporate',
     'Modern Indigo',
     'Elegant Emerald',
-    'Luxury Dark',
   ];
 
   @override

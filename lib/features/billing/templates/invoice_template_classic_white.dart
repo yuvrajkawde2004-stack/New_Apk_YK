@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-class InvoiceTemplateMinimalCorporate extends StatelessWidget {
+class InvoiceTemplateClassicWhite extends StatelessWidget {
   final Map<String, dynamic> billData;
   final List<Map<String, dynamic>> itemsData;
 
-  const InvoiceTemplateMinimalCorporate({
+  const InvoiceTemplateClassicWhite({
     super.key,
     required this.billData,
     required this.itemsData,
@@ -15,9 +15,9 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = NumberFormat('#,##,##0.00');
-    const primaryColor = Color(0xFF1E3A8A); // Deep Blue
-    const textDark = Color(0xFF1F2937);
-    const textGray = Color(0xFF6B7280);
+    const primaryColor = Colors.black;
+    const textDark = Colors.black87;
+    const textGray = Colors.black54;
 
     final customerName = billData['customer_name'] ?? 'Walk-in Customer';
     final customerMobile = billData['customer_mobile'] ?? '';
@@ -60,7 +60,10 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
     return Container(
       width: 400,
       padding: const EdgeInsets.all(24),
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black12, width: 2),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,11 +77,11 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(shopName, style: GoogleFonts.inter(color: primaryColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(shopName, style: GoogleFonts.roboto(color: primaryColor, fontSize: 20, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(shopAddress, style: GoogleFonts.inter(color: textGray, fontSize: 10)),
-                    if (shopPhone.isNotEmpty) Text('Ph: $shopPhone', style: GoogleFonts.inter(color: textGray, fontSize: 10)),
-                    if (shopGstin.isNotEmpty) Text('GSTIN: $shopGstin', style: GoogleFonts.inter(color: textGray, fontSize: 10)),
+                    Text(shopAddress, style: GoogleFonts.roboto(color: textGray, fontSize: 10)),
+                    if (shopPhone.isNotEmpty) Text('Ph: $shopPhone', style: GoogleFonts.roboto(color: textGray, fontSize: 10)),
+                    if (shopGstin.isNotEmpty) Text('GSTIN: $shopGstin', style: GoogleFonts.roboto(color: textGray, fontSize: 10)),
                   ],
                 ),
               ),
@@ -87,9 +90,9 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('INVOICE', style: GoogleFonts.inter(color: primaryColor, fontSize: 24, fontWeight: FontWeight.w900)),
+                    Text('TAX INVOICE', style: GoogleFonts.roboto(color: primaryColor, fontSize: 20, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    _buildMetaRow('Invoice No:', billData['bill_number'].toString(), textGray, textDark),
+                    _buildMetaRow('No:', billData['bill_number'].toString(), textGray, textDark),
                     _buildMetaRow('Date:', formattedDate, textGray, textDark),
                   ],
                 ),
@@ -98,7 +101,7 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
           ),
           
           const SizedBox(height: 20),
-          Divider(color: Colors.grey.shade300, thickness: 1),
+          Divider(color: Colors.black, thickness: 1.5),
           const SizedBox(height: 12),
           
           Row(
@@ -108,11 +111,11 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BILL TO', style: GoogleFonts.inter(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text('BILLED TO', style: GoogleFonts.roboto(color: textGray, fontSize: 10, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(customerName, style: GoogleFonts.inter(color: textDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(customerName, style: GoogleFonts.roboto(color: textDark, fontSize: 12, fontWeight: FontWeight.bold)),
                     if (customerMobile.isNotEmpty)
-                      Text(customerMobile, style: GoogleFonts.inter(color: textGray, fontSize: 10)),
+                      Text(customerMobile, style: GoogleFonts.roboto(color: textGray, fontSize: 10)),
                   ],
                 ),
               ),
@@ -120,33 +123,29 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('PAYMENT DETAILS', style: GoogleFonts.inter(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text('PAYMENT INFO', style: GoogleFonts.roboto(color: textGray, fontSize: 10, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text('Mode: $paymentMethod', style: GoogleFonts.inter(color: textDark, fontSize: 11)),
-                    Text(dueAmount > 0 ? 'Status: DUE' : 'Status: PAID', style: GoogleFonts.inter(color: dueAmount > 0 ? Colors.redAccent : Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text('Method: $paymentMethod', style: GoogleFonts.roboto(color: textDark, fontSize: 11)),
+                    Text(dueAmount > 0 ? 'Status: DUE' : 'Status: PAID', style: GoogleFonts.roboto(color: dueAmount > 0 ? Colors.red : Colors.black, fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
             ],
           ),
           
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              border: Border(
-                top: BorderSide(color: primaryColor, width: 2),
-                bottom: BorderSide(color: primaryColor, width: 2),
-              ),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.black, thickness: 1)),
             ),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('DESCRIPTION', style: GoogleFonts.inter(color: primaryColor, fontSize: 9, fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('QTY', textAlign: TextAlign.center, style: GoogleFonts.inter(color: primaryColor, fontSize: 9, fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('UNIT PRICE', textAlign: TextAlign.right, style: GoogleFonts.inter(color: primaryColor, fontSize: 9, fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('TOTAL', textAlign: TextAlign.right, style: GoogleFonts.inter(color: primaryColor, fontSize: 9, fontWeight: FontWeight.bold))),
+                Expanded(flex: 3, child: Text('DESCRIPTION', style: GoogleFonts.roboto(fontSize: 9, fontWeight: FontWeight.bold, color: textGray))),
+                Expanded(flex: 1, child: Text('QTY', textAlign: TextAlign.center, style: GoogleFonts.roboto(fontSize: 9, fontWeight: FontWeight.bold, color: textGray))),
+                Expanded(flex: 2, child: Text('RATE', textAlign: TextAlign.right, style: GoogleFonts.roboto(fontSize: 9, fontWeight: FontWeight.bold, color: textGray))),
+                Expanded(flex: 2, child: Text('TOTAL', textAlign: TextAlign.right, style: GoogleFonts.roboto(fontSize: 9, fontWeight: FontWeight.bold, color: textGray))),
               ],
             ),
           ),
@@ -163,17 +162,17 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 children: [
-                  Expanded(flex: 3, child: Text(name, style: GoogleFonts.inter(fontSize: 10, color: textDark))),
-                  Expanded(flex: 1, child: Text('$qty', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 10, color: textDark))),
-                  Expanded(flex: 2, child: Text('₹${fmt.format(rate)}', textAlign: TextAlign.right, style: GoogleFonts.inter(fontSize: 10, color: textDark))),
-                  Expanded(flex: 2, child: Text('₹${fmt.format(total)}', textAlign: TextAlign.right, style: GoogleFonts.inter(fontSize: 10, color: textDark))),
+                  Expanded(flex: 3, child: Text(name, style: GoogleFonts.roboto(fontSize: 10, color: textDark))),
+                  Expanded(flex: 1, child: Text('$qty', textAlign: TextAlign.center, style: GoogleFonts.roboto(fontSize: 10, color: textDark))),
+                  Expanded(flex: 2, child: Text('₹${fmt.format(rate)}', textAlign: TextAlign.right, style: GoogleFonts.roboto(fontSize: 10, color: textDark))),
+                  Expanded(flex: 2, child: Text('₹${fmt.format(total)}', textAlign: TextAlign.right, style: GoogleFonts.roboto(fontSize: 10, color: textDark))),
                 ],
               ),
             );
           }),
           
           const SizedBox(height: 12),
-          Divider(color: Colors.grey.shade300, thickness: 1),
+          const Divider(color: Colors.black, thickness: 1.5),
           const SizedBox(height: 12),
           
           Row(
@@ -184,10 +183,10 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('TERMS & CONDITIONS', style: GoogleFonts.inter(color: textGray, fontSize: 9, fontWeight: FontWeight.bold)),
+                    Text('TERMS & CONDITIONS', style: GoogleFonts.roboto(color: textGray, fontSize: 9, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text('1. Payment is due within 15 days.', style: GoogleFonts.inter(color: textGray, fontSize: 8)),
-                    Text('2. Goods once sold will not be taken back.', style: GoogleFonts.inter(color: textGray, fontSize: 8)),
+                    Text('1. Payment is due within 15 days.', style: GoogleFonts.roboto(color: textGray, fontSize: 8)),
+                    Text('2. Goods once sold will not be taken back.', style: GoogleFonts.roboto(color: textGray, fontSize: 8)),
                   ],
                 ),
               ),
@@ -203,16 +202,19 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      color: primaryColor,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black, width: 1.5),
+                        color: Colors.grey.shade100,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('GRAND TOTAL', style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text('TOTAL', style: GoogleFonts.roboto(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
                           Flexible(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerRight,
-                              child: Text('₹${fmt.format(grandTotal)}', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                              child: Text('₹${fmt.format(grandTotal)}', style: GoogleFonts.roboto(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900)),
                             ),
                           ),
                         ],
@@ -234,21 +236,22 @@ class InvoiceTemplateMinimalCorporate extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('$label ', style: GoogleFonts.inter(color: labelCol, fontSize: 10)),
-          Text(value, style: GoogleFonts.inter(color: valCol, fontSize: 10, fontWeight: FontWeight.w600)),
+          Text(label, style: GoogleFonts.roboto(color: labelCol, fontSize: 10)),
+          const SizedBox(width: 8),
+          Text(value, style: GoogleFonts.roboto(color: valCol, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
-  
+
   Widget _buildSummaryRow(String label, double amount, Color labelCol, Color valCol, NumberFormat fmt) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.inter(color: labelCol, fontSize: 9, fontWeight: FontWeight.w500)),
-          Text(amount < 0 ? '-₹${fmt.format(amount.abs())}' : '₹${fmt.format(amount)}', style: GoogleFonts.inter(color: valCol, fontSize: 9, fontWeight: FontWeight.w600)),
+          Text(label, style: GoogleFonts.roboto(color: labelCol, fontSize: 9, fontWeight: FontWeight.w600)),
+          Text('₹${fmt.format(amount)}', style: GoogleFonts.roboto(color: valCol, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
       ),
     );

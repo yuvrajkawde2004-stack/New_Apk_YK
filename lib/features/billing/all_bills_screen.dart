@@ -11,11 +11,11 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_helper.dart';
 import 'billing_screen.dart';
-import 'templates/invoice_template_executive_black.dart';
+import 'templates/invoice_template_classic_white.dart';
 import 'templates/invoice_template_minimal_corporate.dart';
 import 'templates/invoice_template_modern_indigo.dart';
 import 'templates/invoice_template_elegant_emerald.dart';
-import 'templates/invoice_template_luxury_dark.dart';
+import 'templates/invoice_template_premium_white.dart';
 
 class AllBillsScreen extends StatefulWidget {
   const AllBillsScreen({super.key});
@@ -99,7 +99,7 @@ class _AllBillsScreenState extends State<AllBillsScreen> {
                   );
                 }
 
-                final tmpl = prefSnapshot.data!.getString('invoice_template') ?? 'Executive Black & Gold';
+                final tmpl = prefSnapshot.data!.getString('invoice_template') ?? 'Classic White';
                 Widget invoiceWidget;
                 if (tmpl == 'Minimal Corporate') {
                   invoiceWidget = InvoiceTemplateMinimalCorporate(billData: billData, itemsData: itemsData);
@@ -107,10 +107,10 @@ class _AllBillsScreenState extends State<AllBillsScreen> {
                   invoiceWidget = InvoiceTemplateModernIndigo(billData: billData, itemsData: itemsData);
                 } else if (tmpl == 'Elegant Emerald') {
                   invoiceWidget = InvoiceTemplateElegantEmerald(billData: billData, itemsData: itemsData);
-                } else if (tmpl == 'Luxury Dark') {
-                  invoiceWidget = InvoiceTemplateLuxuryDark(billData: billData, itemsData: itemsData);
+                } else if (tmpl == 'Premium White') {
+                  invoiceWidget = InvoiceTemplatePremiumWhite(billData: billData, itemsData: itemsData);
                 } else {
-                  invoiceWidget = InvoiceTemplateExecutiveBlack(billData: billData, itemsData: itemsData);
+                  invoiceWidget = InvoiceTemplateClassicWhite(billData: billData, itemsData: itemsData);
                 }
 
                 return Container(

@@ -224,7 +224,13 @@ class InvoiceTemplateModernIndigo extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('GRAND TOTAL', style: GoogleFonts.poppins(color: primaryColor, fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text('₹${fmt.format(grandTotal)}', style: GoogleFonts.poppins(color: primaryColor, fontSize: 16, fontWeight: FontWeight.w800)),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text('₹${fmt.format(grandTotal)}', style: GoogleFonts.poppins(color: primaryColor, fontSize: 16, fontWeight: FontWeight.w800)),
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -18,11 +18,11 @@ import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import '../customers/customer_list_screen.dart';
-import 'templates/invoice_template_executive_black.dart';
+import 'templates/invoice_template_classic_white.dart';
 import 'templates/invoice_template_minimal_corporate.dart';
 import 'templates/invoice_template_modern_indigo.dart';
 import 'templates/invoice_template_elegant_emerald.dart';
-import 'templates/invoice_template_luxury_dark.dart';
+import 'templates/invoice_template_premium_white.dart';
 
 class BillingScreen extends StatefulWidget {
   final Customer? customer;
@@ -872,7 +872,7 @@ insetPadding: const EdgeInsets.all(16),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Colors.white));
             
-            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Executive Black & Gold';
+            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Classic White';
             
             Widget invoiceWidget;
             if (tmpl == 'Minimal Corporate') {
@@ -881,10 +881,10 @@ insetPadding: const EdgeInsets.all(16),
               invoiceWidget = InvoiceTemplateModernIndigo(billData: billData, itemsData: itemsData);
             } else if (tmpl == 'Elegant Emerald') {
               invoiceWidget = InvoiceTemplateElegantEmerald(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Luxury Dark') {
-              invoiceWidget = InvoiceTemplateLuxuryDark(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Premium White') {
+              invoiceWidget = InvoiceTemplatePremiumWhite(billData: billData, itemsData: itemsData);
             } else {
-              invoiceWidget = InvoiceTemplateExecutiveBlack(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplateClassicWhite(billData: billData, itemsData: itemsData);
             }
 
             return Container(

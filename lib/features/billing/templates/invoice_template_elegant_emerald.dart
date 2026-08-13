@@ -202,7 +202,13 @@ class InvoiceTemplateElegantEmerald extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('GRAND TOTAL', style: GoogleFonts.lato(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text('₹${fmt.format(grandTotal)}', style: GoogleFonts.lato(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text('₹${fmt.format(grandTotal)}', style: GoogleFonts.lato(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
                         ],
                       ),
                     ),
