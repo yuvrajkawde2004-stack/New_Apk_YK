@@ -150,6 +150,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+      await googleSignIn.signOut(); // Force account picker to show every time
       final GoogleSignInAccount? account = await googleSignIn.signIn();
 
       if (account != null) {
