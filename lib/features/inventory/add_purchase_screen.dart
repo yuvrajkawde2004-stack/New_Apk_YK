@@ -214,7 +214,11 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                   initialValue: item.quantity.toString(),
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Qty *', border: OutlineInputBorder()),
-                  onChanged: (v) => item.quantity = int.tryParse(v) ?? 1,
+                  onChanged: (v) {
+                    setState(() {
+                      item.quantity = int.tryParse(v) ?? 1;
+                    });
+                  },
                   validator: (v) => (int.tryParse(v ?? '') ?? 0) <= 0 ? 'Invalid' : null,
                 ),
               ),
@@ -238,7 +242,11 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                   initialValue: item.purchaseRate == 0 ? '' : item.purchaseRate.toString(),
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Purchase Rate (₹) *', prefixText: '₹ ', border: OutlineInputBorder()),
-                  onChanged: (v) => item.purchaseRate = double.tryParse(v) ?? 0.0,
+                  onChanged: (v) {
+                    setState(() {
+                      item.purchaseRate = double.tryParse(v) ?? 0.0;
+                    });
+                  },
                   validator: (v) => (double.tryParse(v ?? '') ?? 0) <= 0 ? 'Invalid' : null,
                 ),
               ),

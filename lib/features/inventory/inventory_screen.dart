@@ -813,13 +813,6 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
             'Supplier Profile & Ledger',
             style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18),
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: AppColors.royalBlue),
-              onPressed: _loadSupplierData,
-              tooltip: 'Refresh Ledger',
-            ),
-          ],
         ),
         body: SafeArea(
           child: Column(
@@ -970,92 +963,110 @@ class _SupplierLedgerSheetState extends State<_SupplierLedgerSheet> with SingleT
                         controller: _innerTabCtrl,
                         children: [
                           // Tab 1: Purchases History
-                          _purchases.isEmpty
-                              ? Center(
-                                  child: Text('No purchases recorded for this supplier', style: GoogleFonts.outfit(color: Colors.grey)),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: _purchases.length,
-                                  itemBuilder: (_, i) {
-                                    final p = _purchases[i];
-                                    final amt = (p['total_amount'] as num?)?.toDouble() ?? 0.0;
-                                    final dateStr = p['purchase_date']?.toString().substring(0, 10) ?? '';
+                          RefreshIndicator(
+                            onRefresh: () async => _loadSupplierData(),
+                            color: AppColors.royalBlue,
+                            child: _purchases.isEmpty
+                                ? ListView(
+                                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                                    children: [
+                                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                                      Center(child: Text('No purchases recorded for this supplier', style: GoogleFonts.outfit(color: Colors.grey))),
+                                    ],
+                                  )
+                                : ListView.builder(
+                                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _purchases.length,
+                                    itemBuilder: (_, i) {
+                                      final p = _purchases[i];
+                                      final amt = (p['total_amount'] as num?)?.toDouble() ?? 0.0;
+                                      final dateStr = p['purchase_date']?.toString().substring(0, 10) ?? '';
 
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      padding: const EdgeInsets.all(14),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.grey.shade200),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          CircleAvatar(
-                                            backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                                            child: const Icon(Icons.shopping_bag_outlined, color: AppColors.royalBlue, size: 20),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(p['product_name'] ?? 'Stock Item', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
-                                                Text('Qty: ${p['quantity']} ${p['unit'] ?? 'PCS'} @ ₹${p['purchase_rate']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
-                                              ],
+                                      return Container(
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                                              child: const Icon(Icons.shopping_bag_outlined, color: AppColors.royalBlue, size: 20),
                                             ),
-                                          ),
-                                          Text('₹${fmt.format(amt)}', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16, color: const Color(0xFF0F172A))),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(p['product_name'] ?? 'Stock Item', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                                                  Text('Qty: ${p['quantity']} ${p['unit'] ?? 'PCS'} @ ₹${p['purchase_rate']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                                                ],
+                                              ),
+                                            ),
+                                            Text('₹${fmt.format(amt)}', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 16, color: const Color(0xFF0F172A))),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
 
                           // Tab 2: Payment Logs
-                          _payments.isEmpty
-                              ? Center(
-                                  child: Text('No payment logs recorded yet', style: GoogleFonts.outfit(color: Colors.grey)),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: _payments.length,
-                                  itemBuilder: (_, i) {
-                                    final pm = _payments[i];
-                                    final amt = (pm['amount_paid'] as num?)?.toDouble() ?? 0.0;
-                                    final dateStr = pm['payment_date']?.toString().substring(0, 10) ?? '';
+                          RefreshIndicator(
+                            onRefresh: () async => _loadSupplierData(),
+                            color: AppColors.royalBlue,
+                            child: _payments.isEmpty
+                                ? ListView(
+                                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                                    children: [
+                                      SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                                      Center(child: Text('No payment logs recorded yet', style: GoogleFonts.outfit(color: Colors.grey))),
+                                    ],
+                                  )
+                                : ListView.builder(
+                                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _payments.length,
+                                    itemBuilder: (_, i) {
+                                      final pm = _payments[i];
+                                      final amt = (pm['amount_paid'] as num?)?.toDouble() ?? 0.0;
+                                      final dateStr = pm['payment_date']?.toString().substring(0, 10) ?? '';
 
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      padding: const EdgeInsets.all(14),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.grey.shade200),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          CircleAvatar(
-                                            backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.1),
-                                            child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text('Paid ₹${fmt.format(amt)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
-                                                Text('Mode: ${pm['payment_method']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
-                                              ],
+                                      return Container(
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                              child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20),
                                             ),
-                                          ),
-                                          Text('SUCCESS', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: const Color(0xFF10B981))),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('Paid ₹${fmt.format(amt)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                                                  Text('Mode: ${pm['payment_method']} • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                                                ],
+                                              ),
+                                            ),
+                                            Text('SUCCESS', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: const Color(0xFF10B981))),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
                         ],
                       ),
               ),

@@ -40,10 +40,11 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
 
   void _onLoginSuccess(String email) async {
     setState(() => _isLoading = true);
+    bool cloudflareSuccess = false;
     try {
       // 1. Request a token from Cloudflare backend silently to authorize D1 database writes
       final sendOtpResponse = await http.post(
-        Uri.parse('https://retailflow-backend.retailflow-backend.workers.dev/api/auth/send-otp'),
+        Uri.parse('https://retailflow-backend.workers.dev/api/auth/send-otp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'target': email, 'type': 'mobile'}),
       );
@@ -52,7 +53,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
         final debugOtp = sendData['debug_otp'];
         // 2. Verify to get JWT token
         final verifyResponse = await http.post(
-          Uri.parse('https://retailflow-backend.retailflow-backend.workers.dev/api/auth/verify-otp'),
+          Uri.parse('https://retailflow-backend.workers.dev/api/auth/verify-otp'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'target': email, 'code': debugOtp}),
         );
@@ -60,6 +61,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
         if (verifyData['success'] == true && verifyData['token'] != null) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('auth_token', verifyData['token']);
+          cloudflareSuccess = true;
         }
       }
     } catch (e) {
@@ -67,6 +69,18 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     }
 
     if (mounted) setState(() => _isLoading = false);
+
+    if (!cloudflareSuccess) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to connect to backend server.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -143,10 +157,11 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
         final name = account.displayName;
         
         setState(() => _isLoading = true);
+        bool cloudflareSuccess = false;
         try {
           // Fetch Cloudflare JWT token silently for Google users too
           final sendOtpResponse = await http.post(
-            Uri.parse('https://retailflow-backend.retailflow-backend.workers.dev/api/auth/send-otp'),
+            Uri.parse('https://retailflow-backend.workers.dev/api/auth/send-otp'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'target': email, 'type': 'gmail'}),
           );
@@ -154,7 +169,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
           if (sendData['success'] == true && sendData['debug_otp'] != null) {
             final debugOtp = sendData['debug_otp'];
             final verifyResponse = await http.post(
-              Uri.parse('https://retailflow-backend.retailflow-backend.workers.dev/api/auth/verify-otp'),
+              Uri.parse('https://retailflow-backend.workers.dev/api/auth/verify-otp'),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({'target': email, 'code': debugOtp, 'name': name}),
             );
@@ -162,12 +177,25 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
             if (verifyData['success'] == true && verifyData['token'] != null) {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString('auth_token', verifyData['token']);
+              cloudflareSuccess = true;
             }
           }
         } catch (e) {
           debugPrint('Failed to sync token with backend: $e');
         }
         if (mounted) setState(() => _isLoading = false);
+
+        if (!cloudflareSuccess) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to connect to backend server.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+          return;
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

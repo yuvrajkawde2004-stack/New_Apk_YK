@@ -11,11 +11,11 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_helper.dart';
 import 'billing_screen.dart';
-import 'templates/invoice_template_classic_gst.dart';
-import 'templates/invoice_template_premium_gold.dart';
-import 'templates/invoice_template_modern_emerald.dart';
-import 'templates/invoice_template_royal_violet.dart';
-import 'templates/invoice_template_minimal_slate.dart';
+import 'templates/invoice_template_executive_black.dart';
+import 'templates/invoice_template_minimal_corporate.dart';
+import 'templates/invoice_template_modern_indigo.dart';
+import 'templates/invoice_template_elegant_emerald.dart';
+import 'templates/invoice_template_luxury_dark.dart';
 
 class AllBillsScreen extends StatefulWidget {
   const AllBillsScreen({super.key});
@@ -99,18 +99,18 @@ class _AllBillsScreenState extends State<AllBillsScreen> {
                   );
                 }
 
-                final tmpl = prefSnapshot.data!.getString('invoice_template') ?? 'Premium Gold';
+                final tmpl = prefSnapshot.data!.getString('invoice_template') ?? 'Executive Black & Gold';
                 Widget invoiceWidget;
-                if (tmpl == 'Classic GST') {
-                  invoiceWidget = InvoiceTemplateClassicGst(billData: billData, itemsData: itemsData);
-                } else if (tmpl == 'Modern Emerald') {
-                  invoiceWidget = InvoiceTemplateModernEmerald(billData: billData, itemsData: itemsData);
-                } else if (tmpl == 'Royal Violet') {
-                  invoiceWidget = InvoiceTemplateRoyalViolet(billData: billData, itemsData: itemsData);
-                } else if (tmpl == 'Minimal Slate') {
-                  invoiceWidget = InvoiceTemplateMinimalSlate(billData: billData, itemsData: itemsData);
+                if (tmpl == 'Minimal Corporate') {
+                  invoiceWidget = InvoiceTemplateMinimalCorporate(billData: billData, itemsData: itemsData);
+                } else if (tmpl == 'Modern Indigo') {
+                  invoiceWidget = InvoiceTemplateModernIndigo(billData: billData, itemsData: itemsData);
+                } else if (tmpl == 'Elegant Emerald') {
+                  invoiceWidget = InvoiceTemplateElegantEmerald(billData: billData, itemsData: itemsData);
+                } else if (tmpl == 'Luxury Dark') {
+                  invoiceWidget = InvoiceTemplateLuxuryDark(billData: billData, itemsData: itemsData);
                 } else {
-                  invoiceWidget = InvoiceTemplatePremiumGold(billData: billData, itemsData: itemsData);
+                  invoiceWidget = InvoiceTemplateExecutiveBlack(billData: billData, itemsData: itemsData);
                 }
 
                 return Container(

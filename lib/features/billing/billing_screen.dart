@@ -18,11 +18,11 @@ import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import '../customers/customer_list_screen.dart';
-import 'templates/invoice_template_classic_gst.dart';
-import 'templates/invoice_template_premium_gold.dart';
-import 'templates/invoice_template_modern_emerald.dart';
-import 'templates/invoice_template_royal_violet.dart';
-import 'templates/invoice_template_minimal_slate.dart';
+import 'templates/invoice_template_executive_black.dart';
+import 'templates/invoice_template_minimal_corporate.dart';
+import 'templates/invoice_template_modern_indigo.dart';
+import 'templates/invoice_template_elegant_emerald.dart';
+import 'templates/invoice_template_luxury_dark.dart';
 
 class BillingScreen extends StatefulWidget {
   final Customer? customer;
@@ -69,6 +69,8 @@ class _BillingScreenState extends State<BillingScreen> {
   bool _isManualPaidAmount = false;
 
   final List<String> _paymentMethods = ['Cash', 'UPI'];
+  final List<double> _gstOptions = [0.0, 5.0, 12.0, 18.0, 28.0];
+  double _globalGstPercent = 0.0;
 
   List<Product> _dbProducts = [];
 
@@ -156,7 +158,7 @@ class _BillingScreenState extends State<BillingScreen> {
   }
 
   double get _subtotal => _items.fold(0, (s, i) => s + i.total);
-  double get _gstAmount => _items.fold(0, (s, i) => s + (i.total * (i.product?.gst ?? 0) / 100)); // GST 0 if custom
+  double get _gstAmount => _subtotal * (_globalGstPercent / 100);
   double get _grandTotal => (_subtotal + _gstAmount).clamp(0.0, double.infinity);
 
   double get _paidAmount {
@@ -864,25 +866,25 @@ class _BillingScreenState extends State<BillingScreen> {
       barrierDismissible: false,
       builder: (_) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
+insetPadding: const EdgeInsets.all(16),
         child: FutureBuilder<SharedPreferences>(
           future: SharedPreferences.getInstance(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Colors.white));
             
-            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Premium Gold';
+            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Executive Black & Gold';
             
             Widget invoiceWidget;
-            if (tmpl == 'Classic GST') {
-              invoiceWidget = InvoiceTemplateClassicGst(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Modern Emerald') {
-              invoiceWidget = InvoiceTemplateModernEmerald(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Royal Violet') {
-              invoiceWidget = InvoiceTemplateRoyalViolet(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Minimal Slate') {
-              invoiceWidget = InvoiceTemplateMinimalSlate(billData: billData, itemsData: itemsData);
+            if (tmpl == 'Minimal Corporate') {
+              invoiceWidget = InvoiceTemplateMinimalCorporate(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Modern Indigo') {
+              invoiceWidget = InvoiceTemplateModernIndigo(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Elegant Emerald') {
+              invoiceWidget = InvoiceTemplateElegantEmerald(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Luxury Dark') {
+              invoiceWidget = InvoiceTemplateLuxuryDark(billData: billData, itemsData: itemsData);
             } else {
-              invoiceWidget = InvoiceTemplatePremiumGold(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplateExecutiveBlack(billData: billData, itemsData: itemsData);
             }
 
             return Container(
@@ -1442,6 +1444,37 @@ class _BillingScreenState extends State<BillingScreen> {
                             children: [
                               Text('Subtotal', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 14)),
                               Text('₹${fmt.format(_subtotal)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF1E293B))),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Apply GST (%)', style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 14)),
+                              Container(
+                                height: 36,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<double>(
+                                    value: _globalGstPercent,
+                                    dropdownColor: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: Color(0xFF64748B)),
+                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A), fontSize: 14),
+                                    items: _gstOptions.map((v) => DropdownMenuItem(
+                                      value: v,
+                                      child: Text('${v.toInt()}%'),
+                                    )).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) setState(() => _globalGstPercent = val);
+                                    },
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),

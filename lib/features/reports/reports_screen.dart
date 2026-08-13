@@ -16,6 +16,7 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   String _period = 'Monthly';
   final _periods = ['Daily', 'Weekly', 'Monthly', 'All Time'];
+  String? _selectedDailyDateStr;
 
   Future<Map<String, dynamic>> _fetchReportData() async {
     final db = DatabaseHelper.instance;
@@ -31,7 +32,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final supplierDues = suppliers.fold<double>(0.0, (sum, s) => sum + ((s['outstanding_due'] as num?)?.toDouble() ?? 0.0));
     final totalPurchasesCost = purchases.fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
 
-    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    final todayStr = _selectedDailyDateStr ?? DateTime.now().toIso8601String().substring(0, 10);
     final monthStr = DateTime.now().toIso8601String().substring(0, 7);
     final weekAgoStr = DateTime.now().subtract(const Duration(days: 7)).toIso8601String().substring(0, 10);
 
@@ -39,7 +40,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     double selectedPurchasesCost = 0.0;
     
     if (_period == 'Daily') {
-      selectedSales = todaySales;
+      selectedSales = await db.getSalesForDate(todayStr);
       selectedPurchasesCost = purchases.where((p) => (p['purchase_date'] ?? '').startsWith(todayStr))
           .fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
     } else if (_period == 'Monthly') {
@@ -101,18 +102,26 @@ class _ReportsScreenState extends State<ReportsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Period Selector Tabs
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _periods.map((p) {
-                    final sel = _period == p;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: _periods.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final p = entry.value;
+                  final sel = _period == p;
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: i == _periods.length - 1 ? 0 : 8),
                       child: GestureDetector(
-                        onTap: () => setState(() => _period = p),
+                        onTap: () {
+                          setState(() {
+                            _period = p;
+                            if (p == 'Daily') _selectedDailyDateStr = null;
+                          });
+                        },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             gradient: sel
                                 ? const LinearGradient(colors: [AppColors.royalBlue, Color(0xFF2563EB)])
@@ -128,13 +137,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             style: GoogleFonts.outfit(
                               color: sel ? Colors.white : AppColors.textSecondaryLight,
                               fontWeight: sel ? FontWeight.bold : FontWeight.w600,
+                              fontSize: 13,
                             ),
                           ),
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  );
+                }).toList(),
               ).animate().fadeIn(),
 
               const SizedBox(height: 20),
@@ -287,17 +297,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     children: [
                                       Text(daySales > 0 ? '₹${(daySales / 1000).toStringAsFixed(1)}k' : '₹0', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
                                       const SizedBox(height: 6),
-                                      AnimatedContainer(
-                                        duration: const Duration(milliseconds: 600),
-                                        width: 24,
-                                        height: 100 * pct,
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: daySales > 0 ? [AppColors.royalBlue, const Color(0xFF3B82F6)] : [Colors.grey.shade300, Colors.grey.shade200],
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _period = 'Daily';
+                                            _selectedDailyDateStr = item['date'];
+                                          });
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 600),
+                                          width: 24,
+                                          height: 100 * pct,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: daySales > 0 ? [AppColors.royalBlue, const Color(0xFF3B82F6)] : [Colors.grey.shade300, Colors.grey.shade200],
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                            ),
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
-                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -459,7 +477,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     return const Center(child: CircularProgressIndicator(color: AppColors.royalBlue));
                   }
 
-                  final list = snapshot.data ?? [];
+                  final rawList = snapshot.data ?? [];
+                  final list = rawList.where((item) => item['product_name'] != 'Custom Item / Service').toList();
+                  
                   if (list.isEmpty) {
                     return Center(
                       child: Text('No product sales recorded yet', style: GoogleFonts.outfit(color: Colors.grey)),

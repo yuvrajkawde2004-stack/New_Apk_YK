@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Flutter App -> Cloudflare Workers (Backend API) -> Cloudflare D1 (SQLite Database) -> Cloudflare R2 (PDF/Image Storage)
 class CloudflareApiService {
   // Base URL of the deployed Cloudflare Worker API
-  static const String baseUrl = 'https://retailflow-backend.retailflow-backend.workers.dev';
+  static const String baseUrl = 'https://retailflow-backend.workers.dev';
 
   // Toggle for offline fallback mode (uses fallback if network/Cloudflare worker is unreachable)
   static bool useOfflineFallback = false;

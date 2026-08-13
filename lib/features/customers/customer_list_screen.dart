@@ -1,11 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/services/ledger_pdf_service.dart';
 import 'customer_profile_screen.dart';
 
 class CustomerListScreen extends StatefulWidget {
@@ -61,6 +66,50 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         (c.phone?.contains(_searchQuery) ?? false)).toList();
   }
 
+  Future<void> _generateAllPendingCustomersPdf() async {
+    final pendingCustomers = _dbCustomers.where((c) => c.outstandingBalance > 0).toList();
+    if (pendingCustomers.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No pending customers found.')));
+      }
+      return;
+    }
+
+    try {
+      double totalPending = 0.0;
+      final List<Map<String, dynamic>> customersMap = [];
+      for (var c in pendingCustomers) {
+        totalPending += c.outstandingBalance;
+        customersMap.add({
+          'name': c.name,
+          'phone': c.phone,
+          'notes': c.notes,
+          'due': c.outstandingBalance,
+        });
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final shopName = prefs.getString('shop_name') ?? 'Our Shop';
+
+      final pdfBytes = await LedgerPdfService.generatePendingCustomersReportPdf(
+        shopName: shopName,
+        totalPending: totalPending,
+        pendingCustomers: customersMap,
+      );
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/All_Pending_Customers_Report.pdf');
+      await file.writeAsBytes(pdfBytes);
+
+      await Share.shareXFiles([XFile(file.path)], text: '$shopName - All Pending Customers Report');
+    } catch (e) {
+      debugPrint('Error generating PDF: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating PDF: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -79,25 +128,16 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: GestureDetector(
-              onTap: widget.onAddCustomer ?? () => _showAddCustomerDialog(context),
+              onTap: _generateAllPendingCustomersPdf,
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.royalBlue, Color(0xFF3B82F6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Colors.redAccent.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.royalBlue.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
                 ),
-                child: const Icon(Icons.person_add_rounded, color: Colors.white, size: 20),
+                child: const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent, size: 22)
+                    .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                    .scale(begin: const Offset(1, 1), end: const Offset(1.15, 1.15), duration: 800.ms),
               ),
             ),
           ),

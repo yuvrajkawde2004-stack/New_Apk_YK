@@ -12,11 +12,11 @@ import '../../core/theme/app_colors.dart';
 import '../billing/billing_screen.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/services/ledger_pdf_service.dart';
-import '../billing/templates/invoice_template_classic_gst.dart';
-import '../billing/templates/invoice_template_premium_gold.dart';
-import '../billing/templates/invoice_template_modern_emerald.dart';
-import '../billing/templates/invoice_template_royal_violet.dart';
-import '../billing/templates/invoice_template_minimal_slate.dart';
+import '../billing/templates/invoice_template_executive_black.dart';
+import '../billing/templates/invoice_template_minimal_corporate.dart';
+import '../billing/templates/invoice_template_modern_indigo.dart';
+import '../billing/templates/invoice_template_elegant_emerald.dart';
+import '../billing/templates/invoice_template_luxury_dark.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   final Customer customer;
@@ -109,19 +109,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Colors.white));
             
-            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Royal Blue';
+            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Executive Black & Gold';
             
             Widget invoiceWidget;
-            if (tmpl == 'Classic GST') {
-              invoiceWidget = InvoiceTemplateClassicGst(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Modern Emerald') {
-              invoiceWidget = InvoiceTemplateModernEmerald(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Royal Violet') {
-              invoiceWidget = InvoiceTemplateRoyalViolet(billData: billData, itemsData: itemsData);
-            } else if (tmpl == 'Minimal Slate') {
-              invoiceWidget = InvoiceTemplateMinimalSlate(billData: billData, itemsData: itemsData);
+            if (tmpl == 'Minimal Corporate') {
+              invoiceWidget = InvoiceTemplateMinimalCorporate(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Modern Indigo') {
+              invoiceWidget = InvoiceTemplateModernIndigo(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Elegant Emerald') {
+              invoiceWidget = InvoiceTemplateElegantEmerald(billData: billData, itemsData: itemsData);
+            } else if (tmpl == 'Luxury Dark') {
+              invoiceWidget = InvoiceTemplateLuxuryDark(billData: billData, itemsData: itemsData);
             } else {
-              invoiceWidget = InvoiceTemplatePremiumGold(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplateExecutiveBlack(billData: billData, itemsData: itemsData);
             }
 
             return Container(
