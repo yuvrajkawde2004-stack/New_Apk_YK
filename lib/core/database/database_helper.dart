@@ -1029,9 +1029,15 @@ class DatabaseHelper {
       'SELECT MAX(id) as lastId FROM bills',
     );
 
-    int nextId = ((result.first['lastId'] as int?) ?? 0) + 1;
+    int lastId = (result.first['lastId'] as int?) ?? 0;
 
-    return 'INV${nextId.toString().padLeft(5, '0')}';
+    final prefs = await SharedPreferences.getInstance();
+    final startNum = prefs.getInt('invoice_start_number') ?? 1;
+    final prefix = prefs.getString('invoice_prefix') ?? 'INV';
+
+    int nextId = lastId + startNum;
+
+    return '$prefix${nextId.toString().padLeft(5, '0')}';
   }
 
   Future<List<Map<String, dynamic>>> searchBills(String keyword) async {

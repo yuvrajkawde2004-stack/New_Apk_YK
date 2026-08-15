@@ -840,18 +840,26 @@ class _HomeTab extends StatelessWidget {
                   );
                 }
 
-                final tmpl = prefSnapshot.data!.getString('invoice_template') ?? 'Classic White';
+                final p = prefSnapshot.data!;
+                final tmpl = p.getString('invoice_template') ?? 'Classic White';
+                
+                final updatedBillData = Map<String, dynamic>.from(billData);
+                if (p.getString('shop_name') != null) updatedBillData['shop_name'] = p.getString('shop_name');
+                if (p.getString('shop_address') != null) updatedBillData['shop_address'] = p.getString('shop_address');
+                if (p.getString('shop_phone') != null) updatedBillData['shop_phone'] = p.getString('shop_phone');
+                if (p.getString('shop_gstin') != null) updatedBillData['shop_gstin'] = p.getString('shop_gstin');
+
                 Widget invoiceWidget;
                 if (tmpl == 'Minimal Corporate') {
-                  invoiceWidget = InvoiceTemplateMinimalCorporate(billData: billData, itemsData: itemsData);
+                  invoiceWidget = InvoiceTemplateMinimalCorporate(billData: updatedBillData, itemsData: itemsData);
                 } else if (tmpl == 'Modern Indigo') {
-                  invoiceWidget = InvoiceTemplateModernIndigo(billData: billData, itemsData: itemsData);
+                  invoiceWidget = InvoiceTemplateModernIndigo(billData: updatedBillData, itemsData: itemsData);
                 } else if (tmpl == 'Elegant Emerald') {
-                  invoiceWidget = InvoiceTemplateElegantEmerald(billData: billData, itemsData: itemsData);
+                  invoiceWidget = InvoiceTemplateElegantEmerald(billData: updatedBillData, itemsData: itemsData);
                 } else if (tmpl == 'Premium White') {
-                  invoiceWidget = InvoiceTemplatePremiumWhite(billData: billData, itemsData: itemsData);
+                  invoiceWidget = InvoiceTemplatePremiumWhite(billData: updatedBillData, itemsData: itemsData);
                 } else {
-                  invoiceWidget = InvoiceTemplateClassicWhite(billData: billData, itemsData: itemsData);
+                  invoiceWidget = InvoiceTemplateClassicWhite(billData: updatedBillData, itemsData: itemsData);
                 }
 
                 return Container(

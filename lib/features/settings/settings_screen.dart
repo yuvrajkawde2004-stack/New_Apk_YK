@@ -613,6 +613,8 @@ class _PremiumInvoiceStudioSheet extends StatefulWidget {
 
 class _PremiumInvoiceStudioSheetState extends State<_PremiumInvoiceStudioSheet> {
   late String _selected;
+  final TextEditingController _prefixCtrl = TextEditingController();
+  final TextEditingController _startNumCtrl = TextEditingController();
 
   final List<String> _templates = [
     'Classic White',
@@ -627,6 +629,15 @@ class _PremiumInvoiceStudioSheetState extends State<_PremiumInvoiceStudioSheet> 
     super.initState();
     _selected = widget.currentTemplate;
     if (!_templates.contains(_selected)) _selected = _templates.first;
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _prefixCtrl.text = prefs.getString('invoice_prefix') ?? 'INV';
+      _startNumCtrl.text = (prefs.getInt('invoice_start_number') ?? 1).toString();
+    });
   }
 
   @override
@@ -637,8 +648,9 @@ class _PremiumInvoiceStudioSheetState extends State<_PremiumInvoiceStudioSheet> 
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -700,14 +712,44 @@ class _PremiumInvoiceStudioSheetState extends State<_PremiumInvoiceStudioSheet> 
           }),
 
           const SizedBox(height: 20),
+          Text('Invoice Number Settings', style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 13)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _prefixCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Prefix (e.g. INV)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _startNumCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Start No.',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
 
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('invoice_prefix', _prefixCtrl.text.trim());
+                await prefs.setInt('invoice_start_number', int.tryParse(_startNumCtrl.text.trim()) ?? 1);
                 widget.onApply(_selected);
-                Navigator.pop(context);
+                if (context.mounted) Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.royalBlue,

@@ -23,6 +23,7 @@ import 'templates/invoice_template_minimal_corporate.dart';
 import 'templates/invoice_template_modern_indigo.dart';
 import 'templates/invoice_template_elegant_emerald.dart';
 import 'templates/invoice_template_premium_white.dart';
+import '../products/add_product_screen.dart';
 
 class BillingScreen extends StatefulWidget {
   final Customer? customer;
@@ -435,6 +436,15 @@ class _BillingScreenState extends State<BillingScreen> {
     if (_items.any((i) => i.price <= 0)) {
        _showTopError('Please enter item price.');
       return;
+    }
+
+    // Validate paid amount
+    if (_isManualPaidAmount) {
+      double enteredAmount = double.tryParse(_paidAmountCtrl.text.trim()) ?? 0.0;
+      if (enteredAmount > _grandTotal) {
+        _showTopError('Paid amount cannot exceed the bill amount (₹${_grandTotal.toStringAsFixed(0)}).');
+        return;
+      }
     }
 
     setState(() => _isProcessing = true);
@@ -872,19 +882,26 @@ insetPadding: const EdgeInsets.all(16),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Colors.white));
             
-            final tmpl = snapshot.data!.getString('invoice_template') ?? 'Classic White';
+            final p = snapshot.data!;
+            final tmpl = p.getString('invoice_template') ?? 'Classic White';
             
+            final updatedBillData = Map<String, dynamic>.from(billData);
+            if (p.getString('shop_name') != null) updatedBillData['shop_name'] = p.getString('shop_name');
+            if (p.getString('shop_address') != null) updatedBillData['shop_address'] = p.getString('shop_address');
+            if (p.getString('shop_phone') != null) updatedBillData['shop_phone'] = p.getString('shop_phone');
+            if (p.getString('shop_gstin') != null) updatedBillData['shop_gstin'] = p.getString('shop_gstin');
+
             Widget invoiceWidget;
             if (tmpl == 'Minimal Corporate') {
-              invoiceWidget = InvoiceTemplateMinimalCorporate(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplateMinimalCorporate(billData: updatedBillData, itemsData: itemsData);
             } else if (tmpl == 'Modern Indigo') {
-              invoiceWidget = InvoiceTemplateModernIndigo(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplateModernIndigo(billData: updatedBillData, itemsData: itemsData);
             } else if (tmpl == 'Elegant Emerald') {
-              invoiceWidget = InvoiceTemplateElegantEmerald(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplateElegantEmerald(billData: updatedBillData, itemsData: itemsData);
             } else if (tmpl == 'Premium White') {
-              invoiceWidget = InvoiceTemplatePremiumWhite(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplatePremiumWhite(billData: updatedBillData, itemsData: itemsData);
             } else {
-              invoiceWidget = InvoiceTemplateClassicWhite(billData: billData, itemsData: itemsData);
+              invoiceWidget = InvoiceTemplateClassicWhite(billData: updatedBillData, itemsData: itemsData);
             }
 
             return Container(
@@ -1164,15 +1181,14 @@ insetPadding: const EdgeInsets.all(16),
                             ),
                             IconButton(
                               icon: const Icon(Icons.add_circle_rounded, color: AppColors.emeraldGreen),
-                              tooltip: 'Add Item',
-                              onPressed: () {
-                                if (_searchCtrl.text.trim().isNotEmpty) {
-                                  final matches = _searchResults;
-                                  if (matches.isNotEmpty) {
-                                    _addItem(matches.first);
-                                  } else {
-                                    _addItem(null, customName: _searchCtrl.text.trim());
-                                  }
+                              tooltip: 'Add New Product to Inventory',
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const AddProductScreen()),
+                                );
+                                if (context.mounted) {
+                                  _loadProducts();
                                 }
                               },
                             ),
