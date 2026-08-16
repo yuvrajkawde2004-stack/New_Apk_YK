@@ -108,9 +108,13 @@ authApp.post('/verify-otp', async (c) => {
       const insertMobile = isEmail ? null : target;
       const insertEmail = isEmail ? target : null;
 
-      await c.env.DB.prepare(
-        `INSERT INTO users (user_id, mobile, email, name) VALUES (?, ?, ?, ?)`
-      ).bind(userId, insertMobile, insertEmail, name || null).run();
+      const shopId = crypto.randomUUID();
+
+      await c.env.DB.batch([
+        c.env.DB.prepare(`INSERT INTO users (user_id, mobile, email, name) VALUES (?, ?, ?, ?)`).bind(userId, insertMobile, insertEmail, name || null),
+        c.env.DB.prepare(`INSERT INTO shops (shop_id, owner_id, shop_name, address) VALUES (?, ?, ?, ?)`).bind(shopId, userId, 'My Shop', ''),
+        c.env.DB.prepare(`INSERT INTO shop_users (id, shop_id, user_id, role) VALUES (?, ?, ?, ?)`).bind(crypto.randomUUID(), shopId, userId, 'owner')
+      ]);
 
       user = { user_id: userId, mobile: insertMobile, email: insertEmail, name: name || null };
     }

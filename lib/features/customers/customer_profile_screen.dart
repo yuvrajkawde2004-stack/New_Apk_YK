@@ -179,18 +179,11 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           if (image == null) return;
                           
                           final directory = await getTemporaryDirectory();
-                          final imagePath = await File('${directory.path}/invoice_${billData['bill_number']}.png').create();
+                          final custName = (billData['customer_name'] ?? 'Customer').toString().replaceAll(' ', '_');
+                          final imagePath = await File('${directory.path}/${custName}_Bill.png').create();
                           await imagePath.writeAsBytes(image);
                           
-                          final dueAmt = (billData['due_amount'] as num?)?.toDouble() ?? 0.0;
-                          final statusMsg = dueAmt > 0 
-                              ? 'Your remaining balance is ₹${dueAmt.toStringAsFixed(0)}.' 
-                              : 'Payment Status: PAID ✅';
-                          
-                          await Share.shareXFiles(
-                            [XFile(imagePath.path)], 
-                            text: 'Hello ${billData['customer_name']},\n\nPlease find your Color Invoice attached.\n$statusMsg\n\nThank you!'
-                          );
+                          await Share.shareXFiles([XFile(imagePath.path)]);
                         } catch (e) {
                           debugPrint('Error sharing color invoice image: $e');
                         }

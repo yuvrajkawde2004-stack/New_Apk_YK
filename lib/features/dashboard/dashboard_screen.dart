@@ -978,13 +978,11 @@ class _HomeTab extends StatelessWidget {
                                 if (image == null) return;
 
                                 final directory = await getTemporaryDirectory();
-                                final imagePath = await File('${directory.path}/invoice_${billData['bill_number']}.png').create();
+                                final custName = (billData['customer_name'] ?? 'Customer').toString().replaceAll(' ', '_');
+                                final imagePath = await File('${directory.path}/${custName}_Bill.png').create();
                                 await imagePath.writeAsBytes(image);
 
-                                await Share.shareXFiles(
-                                  [XFile(imagePath.path)],
-                                  text: 'Hello ${billData['customer_name']},\n\nHere is your invoice for ₹${billData['grand_total']}.\nThank you for your business!',
-                                );
+                                await Share.shareXFiles([XFile(imagePath.path)]);
                               } catch (e) {
                                 debugPrint('Error sharing bill: $e');
                               }

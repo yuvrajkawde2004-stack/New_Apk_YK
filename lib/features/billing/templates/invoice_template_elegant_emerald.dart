@@ -36,6 +36,7 @@ class InvoiceTemplateElegantEmerald extends StatelessWidget {
     final sgst = totalGst / 2;
     final taxableAmount = subtotal - discount;
 
+    final paidAmount = (billData['paid_amount'] as num?)?.toDouble() ?? 0.0;
     final dueAmount = (billData['due_amount'] as num?)?.toDouble() ?? 0.0;
     final paymentMethod = billData['payment_method'] ?? 'Cash';
     
@@ -212,6 +213,9 @@ class InvoiceTemplateElegantEmerald extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    if (paidAmount > 0) _buildSummaryRow('PAID AMOUNT', paidAmount, textGray, Colors.green, fmt),
+                    if (dueAmount > 0) _buildSummaryRow('PENDING DUE', dueAmount, textGray, Colors.redAccent, fmt),
                   ],
                 ),
               ),

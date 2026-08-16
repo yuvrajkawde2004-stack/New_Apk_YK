@@ -24,7 +24,7 @@ import 'templates/invoice_template_minimal_corporate.dart';
 import 'templates/invoice_template_modern_indigo.dart';
 import 'templates/invoice_template_elegant_emerald.dart';
 import 'templates/invoice_template_premium_white.dart';
-import '../products/add_product_screen.dart';
+import '../inventory/add_purchase_screen.dart';
 
 class BillingScreen extends StatefulWidget {
   final Customer? customer;
@@ -984,13 +984,11 @@ insetPadding: const EdgeInsets.all(16),
                               if (image == null) return;
                               
                               final directory = await getTemporaryDirectory();
-                              final imagePath = await File('${directory.path}/invoice_${billData['bill_number']}.png').create();
+                              final custName = (billData['customer_name'] ?? 'Customer').toString().replaceAll(' ', '_');
+                              final imagePath = await File('${directory.path}/${custName}_Bill.png').create();
                               await imagePath.writeAsBytes(image);
                               
-                              await Share.shareXFiles(
-                                [XFile(imagePath.path)], 
-                                text: 'Hello ${billData['customer_name']},\n\nHere is your invoice for ₹${billData['grand_total']}.\nThank you for your business!'
-                              );
+                              await Share.shareXFiles([XFile(imagePath.path)]);
                             } catch (e) {
                               debugPrint('Error sharing: $e');
                             }
@@ -1195,7 +1193,7 @@ insetPadding: const EdgeInsets.all(16),
                               onPressed: () async {
                                 await Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const AddProductScreen()),
+                                  MaterialPageRoute(builder: (_) => const AddPurchaseScreen()),
                                 );
                                 if (context.mounted) {
                                   _loadProducts();
