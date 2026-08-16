@@ -16,6 +16,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/models/product.dart';
 import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/services/sync_service.dart';
 import '../dashboard/providers/dashboard_provider.dart';
 import '../customers/customer_list_screen.dart';
 import 'templates/invoice_template_classic_white.dart';
@@ -411,6 +412,8 @@ class _BillingScreenState extends State<BillingScreen> {
   }
 
   Future<void> _processPayment() async {
+    if (_isProcessing) return;
+
     // If cart is empty but user typed a product in search bar, auto add it!
     if (_items.isEmpty && _searchCtrl.text.trim().isNotEmpty) {
       final text = _searchCtrl.text.trim();
@@ -508,14 +511,18 @@ class _BillingScreenState extends State<BillingScreen> {
         if (mounted) {
           Provider.of<DashboardProvider>(context, listen: false).refreshDashboard();
         }
+        
+        // Trigger immediate cloud sync
+        SyncService().forceSync();
       }
       
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
-      setState(() => _isProcessing = false);
       
       if (_paymentMethod == 'UPI') {
+        setState(() => _isProcessing = false);
         _showUpiDialog(billData, upiId, upiName, () async {
+          if (_isProcessing) return;
           setState(() => _isProcessing = true);
           try {
             await saveBillData();
@@ -547,6 +554,9 @@ class _BillingScreenState extends State<BillingScreen> {
         });
       } else {
         await saveBillData();
+        if (mounted) {
+          setState(() => _isProcessing = false);
+        }
         _showBillSuccessfulAnimationAndNavigate(billData);
       }
       

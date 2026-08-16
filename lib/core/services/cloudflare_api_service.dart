@@ -11,7 +11,7 @@ class CloudflareApiService {
   static const String baseUrl = 'https://retailflow-backend.workers.dev';
 
   // Toggle for offline fallback mode (uses fallback if network/Cloudflare worker is unreachable)
-  static bool useOfflineFallback = true;
+  static bool useOfflineFallback = false;
 
   /// Check Health Status of Cloudflare Worker Backend API
   static Future<bool> checkHealth() async {

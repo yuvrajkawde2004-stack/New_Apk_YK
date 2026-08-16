@@ -20,6 +20,9 @@ class SyncService {
 
     debugPrint('Starting Cloudflare D1 background sync service...');
     
+    // Perform an initial sync immediately
+    _performSync();
+    
     // Sync every 5 minutes in background
     _syncTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
       _performSync();
