@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../core/theme/app_colors.dart';
+import '../../core/database/database_helper.dart';
 
 class OtpLoginScreen extends StatefulWidget {
   const OtpLoginScreen({super.key});
@@ -92,6 +93,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_logged_in', true);
     await prefs.setString('user_id', email);
+    await DatabaseHelper.instance.closeAndReset();
     
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/dashboard');
@@ -208,6 +210,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_logged_in', true);
         await prefs.setString('user_id', email);
+        await DatabaseHelper.instance.closeAndReset();
 
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/dashboard');

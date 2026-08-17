@@ -1107,7 +1107,9 @@ class DatabaseHelper {
 
   Future<int> addBillItem(Map<String, dynamic> item) async {
     final db = await database;
-    return await db.insert('bill_items', item);
+    int id = await db.insert('bill_items', item);
+    await _logSyncAction(db, 'bill_items', 'INSERT', id.toString(), item);
+    return id;
   }
 
   Future<List<Map<String, dynamic>>> getBillItems(int billId) async {
@@ -1127,7 +1129,7 @@ class DatabaseHelper {
     final db = await database;
     await db.transaction((txn) async {
       // 1. Insert into customer_payments
-      await txn.insert('customer_payments', {
+      int payId = await txn.insert('customer_payments', {
         'customer_id': customerId,
         'bill_id': billId,
         'amount_paid': amount,
@@ -1150,6 +1152,14 @@ class DatabaseHelper {
         SET outstanding_balance = MAX(0, outstanding_balance - ?)
         WHERE id = ?
       ''', [amount, customerId]);
+
+      await _logSyncAction(txn, 'customer_payments', 'INSERT', payId.toString(), {
+        'customer_id': customerId,
+        'bill_id': billId,
+        'amount_paid': amount,
+        'payment_method': method,
+        'payment_date': paymentDate,
+      });
     });
   }
 
@@ -1388,7 +1398,9 @@ class DatabaseHelper {
     final db = await database;
     supplier['created_at'] = DateTime.now().toIso8601String();
     supplier['is_deleted'] = 0;
-    return await db.insert('suppliers', supplier, conflictAlgorithm: ConflictAlgorithm.replace);
+    int id = await db.insert('suppliers', supplier, conflictAlgorithm: ConflictAlgorithm.replace);
+    await _logSyncAction(db, 'suppliers', 'INSERT', id.toString(), supplier);
+    return id;
   }
 
   Future<List<Map<String, dynamic>>> getSuppliers() async {
@@ -1415,7 +1427,9 @@ class DatabaseHelper {
 
   Future<int> updateSupplier(int id, Map<String, dynamic> supplier) async {
     final db = await database;
-    return await db.update('suppliers', supplier, where: 'id = ?', whereArgs: [id]);
+    int count = await db.update('suppliers', supplier, where: 'id = ?', whereArgs: [id]);
+    await _logSyncAction(db, 'suppliers', 'UPDATE', id.toString(), supplier);
+    return count;
   }
 
   Future<int> deleteSupplier(int id) async {
@@ -1423,7 +1437,9 @@ class DatabaseHelper {
     try {
       await db.execute('ALTER TABLE suppliers ADD COLUMN is_deleted INTEGER DEFAULT 0');
     } catch (_) {}
-    return await db.update('suppliers', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
+    int count = await db.update('suppliers', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
+    await _logSyncAction(db, 'suppliers', 'DELETE', id.toString(), {'id': id});
+    return count;
   }
 
   Future<int> restoreSupplier(int id) async {
@@ -1431,7 +1447,9 @@ class DatabaseHelper {
     try {
       await db.execute('ALTER TABLE suppliers ADD COLUMN is_deleted INTEGER DEFAULT 0');
     } catch (_) {}
-    return await db.update('suppliers', {'is_deleted': 0}, where: 'id = ?', whereArgs: [id]);
+    int count = await db.update('suppliers', {'is_deleted': 0}, where: 'id = ?', whereArgs: [id]);
+    await _logSyncAction(db, 'suppliers', 'UPDATE', id.toString(), {'id': id, 'is_deleted': 0});
+    return count;
   }
 
   Future<Map<String, double>> getAverageProfitStats() async {
