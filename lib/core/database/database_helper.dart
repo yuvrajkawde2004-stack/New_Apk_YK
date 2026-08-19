@@ -477,7 +477,7 @@ class DatabaseHelper {
     return id;
   }
 
-  Future<List<Map<String, dynamic>>> getCustomers({int limit = 50, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> getCustomers({int limit = 10000, int offset = 0}) async {
     final db = await database;
     return await db.query(
       'customers',
@@ -1781,5 +1781,65 @@ class DatabaseHelper {
     try {
       await db.insert('units', {'name': name.toUpperCase()}, conflictAlgorithm: ConflictAlgorithm.ignore);
     } catch (_) {}
+  }
+
+  // ==========================
+  // 17. SYNC DOWN BATCH IMPORT
+  // ==========================
+  Future<void> performFullSyncDown(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      try {
+        final tables = [
+          'customers',
+          'products',
+          'bills',
+          'bill_items',
+          'suppliers',
+          'purchases',
+          'supplier_payments',
+          'customer_payments'
+        ];
+
+        for (final table in tables) {
+          if (data[table] != null && data[table] is List) {
+            final List items = data[table];
+            for (final item in items) {
+              final Map<String, dynamic> row = Map<String, dynamic>.from(item as Map);
+              
+              row.remove('shop_id'); // SQLite doesn't have shop_id
+
+              // Map Cloudflare primary key back to SQLite 'id'
+              String cloudflareIdKey = 'id';
+              if (table == 'customers') cloudflareIdKey = 'customer_id';
+              if (table == 'products') cloudflareIdKey = 'product_id';
+              if (table == 'bills') cloudflareIdKey = 'bill_id';
+              if (table == 'bill_items') cloudflareIdKey = 'item_id';
+              if (table == 'suppliers') cloudflareIdKey = 'supplier_id';
+              if (table == 'purchases') cloudflareIdKey = 'purchase_id';
+              if (table == 'supplier_payments' || table == 'customer_payments') cloudflareIdKey = 'payment_id';
+
+              if (row.containsKey(cloudflareIdKey)) {
+                // SQLite uses INTEGER id, parse if necessary, but TEXT might be returned by Cloudflare
+                row['id'] = int.tryParse(row[cloudflareIdKey].toString()) ?? row[cloudflareIdKey];
+                row.remove(cloudflareIdKey);
+              }
+              
+              try {
+                await txn.insert(
+                  table,
+                  row,
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+              } catch (e) {
+                print('Error inserting into $table: $e');
+              }
+            }
+          }
+        }
+      } catch (e) {
+        print('Transaction failed during sync down: $e');
+      }
+    });
   }
 }

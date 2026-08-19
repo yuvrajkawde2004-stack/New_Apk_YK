@@ -7,8 +7,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/services/sync_service.dart';
+import '../dashboard/providers/dashboard_provider.dart';
 
 class OtpLoginScreen extends StatefulWidget {
   const OtpLoginScreen({super.key});
@@ -95,8 +98,13 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     await prefs.setString('user_id', email);
     await DatabaseHelper.instance.closeAndReset();
     
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/dashboard');
+    if (mounted) {
+      // Pull all data from Cloudflare for this user
+      await SyncService().performFullSyncDown();
+      
+      Provider.of<DashboardProvider>(context, listen: false).loadDataFromDatabase();
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    }
   }
 
   Future<void> _handleLoginOrSignUp() async {
@@ -212,8 +220,13 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
         await prefs.setString('user_id', email);
         await DatabaseHelper.instance.closeAndReset();
 
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        if (mounted) {
+          // Pull all data from Cloudflare for this user
+          await SyncService().performFullSyncDown();
+          
+          Provider.of<DashboardProvider>(context, listen: false).loadDataFromDatabase();
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
       }
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(

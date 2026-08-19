@@ -247,6 +247,31 @@ class CloudflareApiService {
     }
   }
 
+  /// 7.5. Sync API: Pull all remote data (Sync Down)
+  static Future<Map<String, dynamic>?> fetchSyncDownData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token == null) return null;
+
+      final headers = {'Authorization': 'Bearer $token'};
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/sync/down'), headers: headers)
+          .timeout(const Duration(seconds: 30)); // Longer timeout for bulk data
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          return body['data'] as Map<String, dynamic>?;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Cloudflare fetchSyncDownData error: $e');
+      return null;
+    }
+  }
+
   /// 8. Reset/Clear Test Data on Cloudflare D1
   static Future<bool> clearCloudflareDatabase() async {
     try {

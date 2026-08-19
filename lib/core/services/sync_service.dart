@@ -77,18 +77,25 @@ class SyncService {
         }
       }
 
-      // 2. SYNC DOWN (Pull remote changes)
-      // For now, we will fetch customers to test the sync down process
-      final remoteCustomers = await CloudflareApiService.fetchCustomersFromCloudflare();
-      if (remoteCustomers.isNotEmpty) {
-        debugPrint('Cloudflare D1 returned ${remoteCustomers.length} synced customers.');
-        // TODO: Merge remote changes into local SQLite (Conflict resolution)
-      }
-
     } catch (e) {
       debugPrint('Cloudflare Sync failed: $e');
     } finally {
       _isSyncing = false;
+    }
+  }
+
+  /// 3. SYNC DOWN (Full pull on login/reinstall)
+  Future<void> performFullSyncDown() async {
+    try {
+      debugPrint('Starting full sync down from Cloudflare...');
+      final remoteData = await CloudflareApiService.fetchSyncDownData();
+      if (remoteData != null && remoteData.isNotEmpty) {
+        debugPrint('Cloudflare D1 returned sync down data. Populating local DB...');
+        await DatabaseHelper.instance.performFullSyncDown(remoteData);
+        debugPrint('Full sync down complete.');
+      }
+    } catch (e) {
+      debugPrint('Full sync down failed: $e');
     }
   }
 

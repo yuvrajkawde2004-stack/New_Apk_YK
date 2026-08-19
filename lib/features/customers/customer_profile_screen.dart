@@ -95,6 +95,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       'discount': (bill['discount'] as num?)?.toDouble() ?? 0.0,
       'gst': (bill['gst'] as num?)?.toDouble() ?? 0.0,
       'grand_total': (bill['grand_total'] as num?)?.toDouble() ?? 0.0,
+      'paid_amount': (bill['paid_amount'] as num?)?.toDouble() ?? 0.0,
+      'due_amount': (bill['due_amount'] as num?)?.toDouble() ?? 0.0,
       'payment_method': bill['payment_method'] ?? 'Cash',
       'bill_date': bill['bill_date'] ?? DateTime.now().toIso8601String(),
     };

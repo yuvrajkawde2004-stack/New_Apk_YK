@@ -105,7 +105,7 @@ authApp.post('/verify-otp', async (c) => {
     if (!user) {
       const userId = crypto.randomUUID();
       const isEmail = target.includes('@');
-      const insertMobile = isEmail ? null : target;
+      const insertMobile = isEmail ? `email_${target}` : target;
       const insertEmail = isEmail ? target : null;
 
       const shopId = crypto.randomUUID();
