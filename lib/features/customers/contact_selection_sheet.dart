@@ -79,7 +79,7 @@ class _ContactSelectionSheetState extends State<ContactSelectionSheet> {
     }
 
     try {
-      await DatabaseHelper.instance.insertCustomer({
+      await DatabaseHelper.instance.addCustomer({
         'name': name,
         'phone': phone,
         'email': contact.emails.isNotEmpty ? contact.emails.first.address : '',
