@@ -23,6 +23,8 @@ import '../billing/templates/invoice_template_classic_white.dart';
 import '../billing/templates/invoice_template_minimal_corporate.dart';
 import '../billing/templates/invoice_template_modern_indigo.dart';
 import '../billing/templates/invoice_template_elegant_emerald.dart';
+import '../inventory/add_purchase_screen.dart';
+import '../customers/contact_selection_sheet.dart';
 import '../billing/templates/invoice_template_premium_white.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -37,29 +39,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _HomeTab(
-        onAddCustomer: () => _showAddCustomerSheet(context),
-      ),
+      body: const _HomeTab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _buildPremiumAddCustomerButton(context),
     );
   }
 
-  void _showAddCustomerSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _AddCustomerSheet(),
-    );
+  Widget _buildPremiumAddCustomerButton(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE11D48).withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: () => ContactSelectionSheet.show(context),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'Add Customer (Contacts)',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+     .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 1500.ms);
   }
 }
 
 // ─────────────────────────── HOME TAB ───────────────────────────
 class _HomeTab extends StatelessWidget {
-  final VoidCallback onAddCustomer;
-
-  const _HomeTab({
-    required this.onAddCustomer,
-  });
+  const _HomeTab({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -385,15 +420,20 @@ class _HomeTab extends StatelessWidget {
                           ),
                           _buildActionCard(
                             context: context,
-                            title: 'Add Customer',
-                            subtitle: 'Create Profile',
-                            icon: Icons.person_add_rounded,
+                            title: 'Add Purchase',
+                            subtitle: 'Enter Stock Bill',
+                            icon: Icons.post_add_rounded,
                             gradient: const LinearGradient(
                               colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                            onTap: onAddCustomer,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const AddPurchaseScreen()),
+                              );
+                            },
                           ),
                         ],
                       ).animate().fadeIn(delay: 250.ms).scale(begin: const Offset(0.95, 0.95), end: const Offset(1.0, 1.0)),

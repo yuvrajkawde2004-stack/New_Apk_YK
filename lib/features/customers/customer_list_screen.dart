@@ -8,10 +8,23 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/services/ledger_pdf_service.dart';
 import 'customer_profile_screen.dart';
+
+List<Customer> _parseCustomers(List<Map<String, dynamic>> data) {
+  return data.map<Customer>((json) {
+    return Customer(
+      id: json['id'],
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? '',
+      notes: json['address'],
+      outstandingBalance: (json['outstanding_balance'] as num?)?.toDouble() ?? 0.0,
+    );
+  }).toList();
+}
 
 class CustomerListScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -41,15 +54,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
   Future<void> _loadCustomers() async {
     final data = await DatabaseHelper.instance.getCustomers();
-    final customers = data.map<Customer>((json) {
-      return Customer(
-        id: json['id'],
-        name: json['name'] ?? '',
-        phone: json['phone'] ?? '',
-        notes: json['address'],
-        outstandingBalance: (json['outstanding_balance'] as num?)?.toDouble() ?? 0.0,
-      );
-    }).toList();
+    final customers = await compute(_parseCustomers, data);
     
     if (mounted) {
       setState(() {

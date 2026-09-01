@@ -155,7 +155,7 @@ class CloudflareApiService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
+        final body = await compute(jsonDecode, response.body);
         if (body['success'] == true && body['data'] is List) {
           return List<Map<String, dynamic>>.from(body['data']);
         }
@@ -179,7 +179,7 @@ class CloudflareApiService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
+        final body = await compute(jsonDecode, response.body);
         if (body['success'] == true && body['data'] is List) {
           return List<Map<String, dynamic>>.from(body['data']);
         }
@@ -260,7 +260,7 @@ class CloudflareApiService {
           .timeout(const Duration(seconds: 30)); // Longer timeout for bulk data
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
+        final body = await compute(jsonDecode, response.body);
         if (body['success'] == true) {
           return body['data'] as Map<String, dynamic>?;
         }

@@ -1842,4 +1842,49 @@ class DatabaseHelper {
       }
     });
   }
+
+  // ==========================
+  // PERFORMANCE AGGREGATIONS
+  // ==========================
+  
+  Future<double> getTotalSupplierDues() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT SUM(outstanding_due) as total FROM suppliers');
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getTotalPurchasesCost([String? dateStr]) async {
+    final db = await database;
+    if (dateStr != null && dateStr.isNotEmpty) {
+      final res = await db.rawQuery(
+        'SELECT SUM(total_amount) as total FROM purchases WHERE purchase_date LIKE ?',
+        ['$dateStr%']
+      );
+      return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+    } else {
+      final res = await db.rawQuery('SELECT SUM(total_amount) as total FROM purchases');
+      return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+    }
+  }
+
+  Future<double> getWeeklyPurchasesCost(String weekAgoStr) async {
+    final db = await database;
+    final res = await db.rawQuery(
+      'SELECT SUM(total_amount) as total FROM purchases WHERE purchase_date >= ?',
+      [weekAgoStr]
+    );
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getTotalSales() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT SUM(grand_total) as total FROM bills');
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getTotalStockValue() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT SUM(quantity * purchase_rate) as total FROM products WHERE id != 0');
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
 }

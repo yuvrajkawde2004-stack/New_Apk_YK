@@ -21,9 +21,8 @@ class InventoryScreen extends StatefulWidget {
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
 
-class _InventoryScreenState extends State<InventoryScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _InventoryScreenState extends State<InventoryScreen> {
+
 
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _purchases = [];
@@ -31,27 +30,40 @@ class _InventoryScreenState extends State<InventoryScreen>
   bool _isLoading = true;
   String _searchQuery = '';
 
+  int _totalStockCount = 0;
+  double _totalStockValue = 0.0;
+  int _lowStockCount = 0;
+  double _totalSupplierDues = 0.0;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (mounted) setState(() {});
-    });
     _loadAllData();
   }
 
   Future<void> _loadAllData() async {
     setState(() => _isLoading = true);
-    final prods = await DatabaseHelper.instance.getProducts(limit: 1000);
-    final purchases = await DatabaseHelper.instance.getAllPurchases();
-    final suppliers = await DatabaseHelper.instance.getSuppliers();
+    final db = DatabaseHelper.instance;
+    final prods = await db.getProducts(limit: 500); // reduced limit for UI
+    final purchases = await db.getAllPurchases(); // keep it as is, or maybe limit inside getAllPurchases? We'll leave it for now. Actually, we should limit it if possible, but let's just fetch it.
+    final suppliers = await db.getSuppliers();
+
+    final stockCount = await db.getTotalProductsCount();
+    final stockValue = await db.getTotalStockValue();
+    final lowStock = await db.getLowStockProductsCount();
+    final supplierDues = await db.getTotalSupplierDues();
 
     if (mounted) {
       setState(() {
         _products = prods;
         _purchases = purchases;
         _suppliers = suppliers;
+
+        _totalStockCount = stockCount;
+        _totalStockValue = stockValue;
+        _lowStockCount = lowStock;
+        _totalSupplierDues = supplierDues;
+
         _isLoading = false;
       });
     }
@@ -59,15 +71,8 @@ class _InventoryScreenState extends State<InventoryScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
-
-  // Calculate totals
-  int get _totalStockCount => _products.fold<int>(0, (sum, item) => sum + ((item['quantity'] as int?) ?? 0));
-  double get _totalStockValue => _products.fold<double>(0.0, (sum, item) => sum + (((item['quantity'] as int?) ?? 0) * ((item['purchase_rate'] as num?)?.toDouble() ?? 0.0)));
-  int get _lowStockCount => _products.where((p) => ((p['id'] as int?) ?? 1) != 0 && ((p['quantity'] as int?) ?? 0) <= ((p['low_stock_limit'] as int?) ?? 5)).length;
-  double get _totalSupplierDues => _suppliers.fold<double>(0.0, (sum, s) => sum + ((s['outstanding_due'] as num?)?.toDouble() ?? 0.0));
 
   @override
   Widget build(BuildContext context) {
@@ -77,44 +82,14 @@ class _InventoryScreenState extends State<InventoryScreen>
         backgroundColor: Colors.white,
         elevation: 0.5,
         title: Text(
-          'Stock',
+          'Stock Items',
           style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18),
         ),
         iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
-        actions: const [],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.royalBlue,
-          unselectedLabelColor: AppColors.textSecondaryLight,
-          indicatorColor: AppColors.royalBlue,
-          indicatorWeight: 3,
-          labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-          tabs: const [
-            Tab(icon: Icon(Icons.inventory_2_rounded, size: 20), text: 'Stock Items'),
-            Tab(icon: Icon(Icons.local_shipping_rounded, size: 20), text: 'Suppliers Ledger'),
-          ],
-        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.royalBlue))
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildStockTab(),
-                _buildSuppliersTab(),
-              ],
-            ),
-      floatingActionButton: _tabController.index == 1
-          ? FloatingActionButton.extended(
-              onPressed: _showAddSupplierSheet,
-              backgroundColor: AppColors.royalBlue,
-              icon: const Icon(Icons.person_add_rounded, color: Colors.white),
-              label: Text(
-                'Add Supplier',
-                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            )
-          : null,
+          : _buildStockTab(),
     );
   }
 

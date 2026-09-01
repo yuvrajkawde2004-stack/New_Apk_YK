@@ -24,13 +24,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final monthlySales = await db.getMonthlySales();
     final totalBills = await db.getTotalBills();
     final weeklySalesData = await db.getWeeklySalesData();
-    final customers = await db.getCustomers(limit: 1000);
-    final suppliers = await db.getSuppliers();
-    final purchases = await db.getAllPurchases();
 
-    final customerDues = customers.fold<double>(0.0, (sum, c) => sum + ((c['outstanding_balance'] as num?)?.toDouble() ?? 0.0));
-    final supplierDues = suppliers.fold<double>(0.0, (sum, s) => sum + ((s['outstanding_due'] as num?)?.toDouble() ?? 0.0));
-    final totalPurchasesCost = purchases.fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+    final customerDues = await db.getTotalOutstandingAmount();
+    final supplierDues = await db.getTotalSupplierDues();
+    final totalPurchasesCost = await db.getTotalPurchasesCost();
 
     final todayStr = _selectedDailyDateStr ?? DateTime.now().toIso8601String().substring(0, 10);
     final monthStr = DateTime.now().toIso8601String().substring(0, 7);
@@ -41,21 +38,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     
     if (_period == 'Daily') {
       selectedSales = await db.getSalesForDate(todayStr);
-      selectedPurchasesCost = purchases.where((p) => (p['purchase_date'] ?? '').startsWith(todayStr))
-          .fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+      selectedPurchasesCost = await db.getTotalPurchasesCost(todayStr);
     } else if (_period == 'Monthly') {
       selectedSales = monthlySales;
-      selectedPurchasesCost = purchases.where((p) => (p['purchase_date'] ?? '').startsWith(monthStr))
-          .fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+      selectedPurchasesCost = await db.getTotalPurchasesCost(monthStr);
     } else if (_period == 'Weekly') {
       selectedSales = weeklySalesData.fold<double>(0.0, (sum, item) => sum + ((item['sales'] as num?)?.toDouble() ?? 0.0));
-      selectedPurchasesCost = purchases.where((p) {
-        final dStr = (p['purchase_date'] as String?) ?? '';
-        return dStr.isNotEmpty && dStr.substring(0, 10).compareTo(weekAgoStr) >= 0;
-      }).fold<double>(0.0, (sum, p) => sum + ((p['total_amount'] as num?)?.toDouble() ?? 0.0));
+      selectedPurchasesCost = await db.getWeeklyPurchasesCost(weekAgoStr);
     } else if (_period == 'All Time') {
-      final allBills = await db.getBills(limit: 10000);
-      selectedSales = allBills.fold<double>(0.0, (sum, b) => sum + ((b['grand_total'] as num?)?.toDouble() ?? 0.0));
+      selectedSales = await db.getTotalSales();
       selectedPurchasesCost = totalPurchasesCost;
     }
 
