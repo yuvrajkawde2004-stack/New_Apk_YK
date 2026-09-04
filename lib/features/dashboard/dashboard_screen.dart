@@ -40,55 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: const _HomeTab(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _buildPremiumAddCustomerButton(context),
     );
-  }
-
-  Widget _buildPremiumAddCustomerButton(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      width: double.infinity,
-      height: 60,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFE11D48).withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        gradient: const LinearGradient(
-          colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(30),
-          onTap: () => ContactSelectionSheet.show(context),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 24),
-              const SizedBox(width: 12),
-              Text(
-                'Add Customer (Contacts)',
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-     .scale(begin: const Offset(1, 1), end: const Offset(1.02, 1.02), duration: 1500.ms);
   }
 }
 
@@ -377,6 +329,43 @@ class _HomeTab extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
+                            trailingWidget: GestureDetector(
+                              onTap: () => ContactSelectionSheet.show(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFE11D48).withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.add, color: Colors.white, size: 14),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'ADD',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                               .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 1500.ms),
+                            ),
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -608,6 +597,7 @@ class _HomeTab extends StatelessWidget {
     required IconData icon,
     required LinearGradient gradient,
     String? badge,
+    Widget? trailingWidget,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -638,6 +628,7 @@ class _HomeTab extends StatelessWidget {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -647,7 +638,9 @@ class _HomeTab extends StatelessWidget {
                     ),
                     child: Icon(icon, color: Colors.white, size: 24),
                   ),
-                  if (badge != null)
+                  if (trailingWidget != null)
+                    trailingWidget
+                  else if (badge != null)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(

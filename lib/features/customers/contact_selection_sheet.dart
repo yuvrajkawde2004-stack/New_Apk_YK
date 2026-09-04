@@ -82,7 +82,6 @@ class _ContactSelectionSheetState extends State<ContactSelectionSheet> {
       await DatabaseHelper.instance.addCustomer({
         'name': name,
         'phone': phone,
-        'email': contact.emails.isNotEmpty ? contact.emails.first.address : '',
         'outstanding_balance': 0.0,
       });
 
