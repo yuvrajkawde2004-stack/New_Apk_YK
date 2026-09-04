@@ -77,6 +77,11 @@ class _ContactSelectionSheetState extends State<ContactSelectionSheet> {
     if (contact.phones.isNotEmpty) {
       phone = contact.phones.first.number;
     }
+    
+    // Fallback for contacts without phone numbers to avoid UNIQUE constraint crash
+    if (phone.isEmpty) {
+      phone = 'N/A_${DateTime.now().millisecondsSinceEpoch}';
+    }
 
     try {
       await DatabaseHelper.instance.addCustomer({
