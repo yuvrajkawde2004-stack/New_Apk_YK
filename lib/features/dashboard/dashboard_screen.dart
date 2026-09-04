@@ -381,9 +381,19 @@ class _HomeTab extends StatelessWidget {
                               end: Alignment.bottomRight,
                             ),
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const AddPurchaseScreen()),
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => Container(
+                                  height: MediaQuery.of(context).size.height * 0.9,
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                  ),
+                                  child: const AddPurchaseScreen(),
+                                ),
                               );
                             },
                           ),

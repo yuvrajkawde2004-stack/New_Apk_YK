@@ -78,6 +78,43 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      floatingActionButton: GestureDetector(
+        onTap: () => _showAddPurchaseSheet(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE11D48).withValues(alpha: 0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add, color: Colors.white, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                'Purchase',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+         .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 1500.ms),
+      ),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
@@ -261,6 +298,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget _buildPurchasesTab() {
     final fmt = NumberFormat('#,##,##0.00');
 
+    final Map<String, List<Map<String, dynamic>>> groupedBills = {};
+    for (var p in _purchases) {
+      final key = p['created_at']?.toString() ?? '';
+      if (!groupedBills.containsKey(key)) {
+        groupedBills[key] = [];
+      }
+      groupedBills[key]!.add(p);
+    }
+    
+    final sortedKeys = groupedBills.keys.toList()..sort((a, b) => b.compareTo(a));
+
     return RefreshIndicator(
       onRefresh: _loadAllData,
       color: AppColors.royalBlue,
@@ -284,7 +332,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     children: [
                       Text('Stock Purchase Ledger', style: GoogleFonts.outfit(color: Colors.white70, fontSize: 12)),
                       const SizedBox(height: 4),
-                      Text('${_purchases.length} Purchase Invoices', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('${groupedBills.length} Purchase Invoices', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ],
@@ -292,52 +340,66 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ),
 
-          if (_purchases.isEmpty)
+          if (groupedBills.isEmpty)
             Center(
               child: Text('No purchase records available', style: GoogleFonts.outfit(color: Colors.grey)),
             )
           else
-            ..._purchases.map((pur) {
-              final total = (pur['total_amount'] as num?)?.toDouble() ?? 0.0;
-              final due = (pur['due_amount'] as num?)?.toDouble() ?? 0.0;
-              final dateStr = pur['purchase_date']?.toString().substring(0, 10) ?? '';
+            ...sortedKeys.map((key) {
+              final items = groupedBills[key]!;
+              final firstItem = items.first;
+              final supName = firstItem['supplier_name'] ?? 'Unknown';
+              final dateStr = firstItem['purchase_date']?.toString().substring(0, 10) ?? '';
+              
+              double totalBillAmt = 0.0;
+              for (var i in items) {
+                totalBillAmt += (i['total_amount'] as num?)?.toDouble() ?? 0.0;
+              }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10, left: 16, right: 16),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                      child: const Icon(Icons.shopping_bag_rounded, color: AppColors.royalBlue, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              return GestureDetector(
+                onTap: () => _showPurchaseBillDetails(items, totalBillAmt),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10, left: 16, right: 16),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
+                        child: const Icon(Icons.receipt_long_rounded, color: AppColors.royalBlue, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Purchase Bill', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                            Text('Supplier: $supName • $dateStr', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade600)),
+                            Text('${items.length} Products', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(pur['product_name'] ?? 'Stock Item', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
-                          Text('Supplier: ${pur['supplier_name'] ?? 'N/A'} • $dateStr', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade600)),
-                          Text('Qty: ${pur['quantity']} ${pur['unit'] ?? 'PCS'} @ ₹${pur['purchase_rate']}', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade800)),
+                          Text('₹${fmt.format(totalBillAmt)}', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.royalBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('View Products', style: GoogleFonts.outfit(color: AppColors.royalBlue, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
                         ],
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('₹${fmt.format(total)}', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 15)),
-                        if (due > 0)
-                          Text('Due: ₹${fmt.format(due)}', style: GoogleFonts.outfit(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11))
-                        else
-                          Text('PAID ✅', style: GoogleFonts.outfit(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11)),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }).toList(),
@@ -586,11 +648,81 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _showAddPurchaseSheet() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AddPurchaseScreen(
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: AddPurchaseScreen(
           onSaved: _loadAllData,
+        ),
+      ),
+    );
+  }
+
+  void _showPurchaseBillDetails(List<Map<String, dynamic>> items, double totalBillAmt) {
+    final fmt = NumberFormat('#,##,##0.00');
+    final supName = items.first['supplier_name'] ?? 'Unknown';
+    final dateStr = items.first['purchase_date']?.toString().substring(0, 10) ?? '';
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('Purchase Bill Details', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Supplier: $supName | Date: $dateStr', style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade700)),
+            const Divider(height: 24),
+            Expanded(
+              child: ListView.builder(
+                itemCount: items.length,
+                itemBuilder: (context, i) {
+                  final item = items[i];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item['product_name'] ?? '', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text('${item['quantity']} ${item['unit'] ?? 'PCS'} x ₹${item['purchase_rate']}', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Text('₹${fmt.format(item['total_amount'] ?? 0)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Bill Amount', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('₹${fmt.format(totalBillAmt)}', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );
@@ -1229,18 +1361,32 @@ class _AddSupplierSheetState extends State<_AddSupplierSheet> {
                   'address': _addressCtrl.text.trim(),
                 };
 
-                if (isEdit) {
-                  await DatabaseHelper.instance.updateSupplier(widget.initialSupplier!['id'], supplierData);
-                } else {
-                  supplierData['total_purchased'] = 0.0;
-                  supplierData['total_paid'] = 0.0;
-                  supplierData['outstanding_due'] = 0.0;
-                  await DatabaseHelper.instance.addSupplier(supplierData);
-                }
-                
-                if (mounted) {
-                  Navigator.pop(context);
-                  widget.onSaved();
+                try {
+                  if (isEdit) {
+                    await DatabaseHelper.instance.updateSupplier(widget.initialSupplier!['id'], supplierData);
+                  } else {
+                    supplierData['total_purchased'] = 0.0;
+                    supplierData['total_paid'] = 0.0;
+                    supplierData['outstanding_due'] = 0.0;
+                    await DatabaseHelper.instance.addSupplier(supplierData);
+                  }
+                  
+                  if (mounted) {
+                    Navigator.pop(context);
+                    widget.onSaved();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    setState(() => _saving = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString().contains('UNIQUE') 
+                          ? 'A supplier with this name already exists!' 
+                          : 'Failed to save supplier. Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.royalBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),

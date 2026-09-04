@@ -64,9 +64,21 @@ class _ContactSelectionSheetState extends State<ContactSelectionSheet> {
 
   void _filterContacts() {
     final query = _searchController.text.toLowerCase();
+    final cleanQuery = query.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
+    
     setState(() {
       _filteredContacts = _contacts.where((contact) {
-        return contact.displayName.toLowerCase().contains(query);
+        final nameMatches = contact.displayName.toLowerCase().contains(query);
+        
+        bool phoneMatches = false;
+        if (cleanQuery.isNotEmpty) {
+          phoneMatches = contact.phones.any((phone) {
+            final cleanPhone = phone.number.replaceAll(RegExp(r'[\s\-\+\(\)]'), '');
+            return cleanPhone.contains(cleanQuery);
+          });
+        }
+        
+        return nameMatches || phoneMatches;
       }).toList();
     });
   }

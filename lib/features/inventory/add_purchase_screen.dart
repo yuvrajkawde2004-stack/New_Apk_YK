@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/theme/app_colors.dart';
+import 'package:intl/intl.dart';
 
 class AddPurchaseScreen extends StatefulWidget {
   final VoidCallback? onSaved;
@@ -36,6 +37,42 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   
   final List<_AddPurchaseItem> _items = [_AddPurchaseItem()];
 
+  List<Map<String, dynamic>> _selectedSupplierLedger = [];
+  bool _loadingLedger = false;
+
+  Future<void> _loadSupplierLedger(String supName) async {
+    setState(() => _loadingLedger = true);
+    final pur = await DatabaseHelper.instance.getPurchasesBySupplier(supName);
+    final pay = await DatabaseHelper.instance.getSupplierPayments(supName);
+    
+    final List<Map<String, dynamic>> allTrans = [];
+    for (var p in pur) {
+      allTrans.add({
+        'date': p['purchase_date']?.toString().substring(0, 10) ?? '',
+        'desc': 'Purchase (${p['product_name']})',
+        'type': 'Purchase',
+        'amt': (p['total_amount'] as num?)?.toDouble() ?? 0.0,
+      });
+    }
+    for (var p in pay) {
+      allTrans.add({
+        'date': p['payment_date']?.toString().substring(0, 10) ?? '',
+        'desc': 'Payment',
+        'type': 'Payment',
+        'amt': (p['amount_paid'] as num?)?.toDouble() ?? 0.0,
+      });
+    }
+    
+    allTrans.sort((a, b) => b['date'].toString().compareTo(a['date'].toString()));
+    
+    if (mounted) {
+      setState(() {
+        _selectedSupplierLedger = allTrans.take(5).toList();
+        _loadingLedger = false;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +90,7 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
           _selectedSupplierName = sups.first['name'];
         }
         _supCtrl.text = _selectedSupplierName!;
+        _loadSupplierLedger(_selectedSupplierName!);
       }
     });
   }
@@ -150,9 +188,60 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                     _selectedSupplierName = val;
                     _supCtrl.text = val;
                   });
+                  _loadSupplierLedger(val);
                 }
               },
             ),
+          
+          if (_selectedSupplierName != null && _suppliers.any((s) => s['name'] == _selectedSupplierName))
+            Builder(builder: (ctx) {
+              final sup = _suppliers.firstWhere((s) => s['name'] == _selectedSupplierName);
+              final fmt = NumberFormat('#,##,##0.00');
+              final due = (sup['outstanding_due'] as num?)?.toDouble() ?? 0.0;
+              final paid = (sup['total_paid'] as num?)?.toDouble() ?? 0.0;
+              return Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Paid (Jama): ₹${fmt.format(paid)}', style: GoogleFonts.outfit(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Due (Baki): ₹${fmt.format(due)}', style: GoogleFonts.outfit(color: due > 0 ? Colors.red : Colors.grey.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ],
+                    ),
+                    if (_loadingLedger)
+                       const Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator())
+                    else if (_selectedSupplierLedger.isNotEmpty) ...[
+                      const Divider(height: 12),
+                      Text('Recent Transactions:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12)),
+                      const SizedBox(height: 4),
+                      ..._selectedSupplierLedger.map((t) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text('${t['date']} - ${t['desc']}', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade800))),
+                            Text(
+                              t['type'] == 'Payment' ? 'Jama: ₹${fmt.format(t['amt'])}' : 'Bill: ₹${fmt.format(t['amt'])}',
+                              style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: t['type'] == 'Payment' ? Colors.green.shade700 : Colors.red.shade700),
+                            ),
+                          ],
+                        ),
+                      )),
+                    ]
+                  ],
+                ),
+              );
+            }),
+            
           const SizedBox(height: 12),
           TextFormField(
             controller: _supCtrl,
@@ -331,13 +420,12 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
 
         // 2. Insert Purchases and Products
         double totalPurchaseValue = 0.0;
+        final nowStr = DateTime.now().toIso8601String();
         for (var item in _items) {
           final pName = item.name.trim();
           final qty = item.quantity;
           final rate = item.purchaseRate;
           totalPurchaseValue += (rate * qty);
-          
-          final nowStr = DateTime.now().toIso8601String();
           
           await txn.insert('purchases', {
             'product_id': 0,
