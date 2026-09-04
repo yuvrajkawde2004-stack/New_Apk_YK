@@ -13,6 +13,7 @@ import '../../core/models/customer.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/services/ledger_pdf_service.dart';
 import 'customer_profile_screen.dart';
+import 'contact_selection_sheet.dart';
 
 List<Customer> _parseCustomers(List<Map<String, dynamic>> data) {
   return data.map<Customer>((json) {
@@ -120,6 +121,43 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     final loc = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      floatingActionButton: GestureDetector(
+        onTap: () => ContactSelectionSheet.show(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE11D48).withValues(alpha: 0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add, color: Colors.white, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                'Add',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+         .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 1500.ms),
+      ),
       appBar: AppBar(
         title: const Text('Customer'),
         automaticallyImplyLeading: !widget.isEmbedded,
@@ -150,19 +188,6 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       ),
       body: Column(
         children: [
-          // Summary Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-            child: Row(
-              children: [
-                _summaryChip('${_dbCustomers.length} Total', AppColors.royalBlue),
-                const SizedBox(width: 10),
-                _summaryChip(
-                    '${_dbCustomers.where((c) => c.outstandingBalance > 0).length} Due',
-                    AppColors.softOrange),
-              ],
-            ).animate().fadeIn(),
-          ),
           const SizedBox(height: 14),
 
           // Search
@@ -217,19 +242,6 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _summaryChip(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(text,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
     );
   }
 

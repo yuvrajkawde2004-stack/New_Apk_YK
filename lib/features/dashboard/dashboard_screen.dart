@@ -329,43 +329,6 @@ class _HomeTab extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                            trailingWidget: GestureDetector(
-                              onTap: () => ContactSelectionSheet.show(context),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFFE11D48), Color(0xFFBE123C)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFE11D48).withValues(alpha: 0.4),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.add, color: Colors.white, size: 14),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'ADD',
-                                      style: GoogleFonts.outfit(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                               .scale(begin: const Offset(1, 1), end: const Offset(1.05, 1.05), duration: 1500.ms),
-                            ),
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -597,7 +560,6 @@ class _HomeTab extends StatelessWidget {
     required IconData icon,
     required LinearGradient gradient,
     String? badge,
-    Widget? trailingWidget,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -628,7 +590,6 @@ class _HomeTab extends StatelessWidget {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -638,9 +599,7 @@ class _HomeTab extends StatelessWidget {
                     ),
                     child: Icon(icon, color: Colors.white, size: 24),
                   ),
-                  if (trailingWidget != null)
-                    trailingWidget
-                  else if (badge != null)
+                  if (badge != null)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
