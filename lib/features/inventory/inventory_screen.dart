@@ -659,63 +659,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _showPurchaseBillDetails(List<Map<String, dynamic>> items, double totalBillAmt) {
-    final fmt = NumberFormat('#,##,##0.00');
-    final supName = items.first['supplier_name'] ?? 'Unknown';
-    final dateStr = items.first['purchase_date']?.toString().substring(0, 10) ?? '';
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 16),
-            Text('Purchase Bill Details', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text('Supplier: $supName | Date: $dateStr', style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade700)),
-            const Divider(height: 24),
-            Expanded(
-              child: ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (context, i) {
-                  final item = items[i];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item['product_name'] ?? '', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
-                              Text('${item['quantity']} ${item['unit'] ?? 'PCS'} x ₹${item['purchase_rate']}', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                        Text('₹${fmt.format(item['total_amount'] ?? 0)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            const Divider(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Total Bill Amount', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-                Text('₹${fmt.format(totalBillAmt)}', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+      builder: (context) => _PurchaseBillDetailsSheet(
+        items: items,
+        totalBillAmt: totalBillAmt,
+        onSaved: _loadAllData,
       ),
     );
   }
@@ -1391,3 +1342,275 @@ class _AddSupplierSheetState extends State<_AddSupplierSheet> {
   }
 }
 
+class _PurchaseBillDetailsSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> items;
+  final double totalBillAmt;
+  final VoidCallback onSaved;
+
+  const _PurchaseBillDetailsSheet({
+    Key? key,
+    required this.items,
+    required this.totalBillAmt,
+    required this.onSaved,
+  }) : super(key: key);
+
+  @override
+  State<_PurchaseBillDetailsSheet> createState() => _PurchaseBillDetailsSheetState();
+}
+
+class _PurchaseBillDetailsSheetState extends State<_PurchaseBillDetailsSheet> {
+  bool _loading = true;
+  double _totalPaid = 0.0;
+  List<Map<String, dynamic>> _payments = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPayments();
+  }
+
+  Future<void> _loadPayments() async {
+    final billKey = widget.items.first['created_at']?.toString() ?? '';
+    if (billKey.isEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
+    
+    final p = await DatabaseHelper.instance.getPurchaseBillPayments(billKey);
+    double paid = 0.0;
+    for (var pay in p) {
+      paid += (pay['amount_paid'] as num).toDouble();
+    }
+    
+    setState(() {
+      _payments = p;
+      _totalPaid = paid;
+      _loading = false;
+    });
+  }
+
+  Future<void> _showPayDialog() async {
+    final due = widget.totalBillAmt - _totalPaid;
+    if (due <= 0) return;
+    
+    final amtCtrl = TextEditingController(text: due.toStringAsFixed(2));
+    DateTime? selectedDate = DateTime.now();
+    bool saving = false;
+    
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Pay Bill Balance', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Remaining Due: ₹${due.toStringAsFixed(2)}', style: GoogleFonts.outfit(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amtCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Payment Amount', border: OutlineInputBorder(), prefixText: '₹'),
+              ),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate!,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (d != null) {
+                    setDialogState(() => selectedDate = d);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(4)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Date: ${selectedDate!.toString().substring(0, 10)}'),
+                      const Icon(Icons.calendar_today, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: saving ? null : () async {
+                final amt = double.tryParse(amtCtrl.text) ?? 0.0;
+                if (amt <= 0 || amt > due) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Invalid amount')));
+                  return;
+                }
+                setDialogState(() => saving = true);
+                
+                final supName = widget.items.first['supplier_name']?.toString() ?? '';
+                final billKey = widget.items.first['created_at']?.toString() ?? '';
+                final pDateStr = selectedDate!.toIso8601String();
+                
+                final db = await DatabaseHelper.instance.database;
+                await db.transaction((txn) async {
+                  await txn.insert('purchase_bill_payments', {
+                    'bill_key': billKey,
+                    'amount_paid': amt,
+                    'payment_date': pDateStr,
+                    'created_at': DateTime.now().toIso8601String(),
+                  });
+                  
+                  await txn.insert('supplier_payments', {
+                    'supplier_name': supName,
+                    'amount_paid': amt,
+                    'payment_method': 'Cash',
+                    'payment_date': pDateStr,
+                    'created_at': DateTime.now().toIso8601String(),
+                  });
+                  
+                  final supData = await txn.query('suppliers', where: 'name = ?', whereArgs: [supName]);
+                  if (supData.isNotEmpty) {
+                    final supId = supData.first['id'];
+                    double curPaid = (supData.first['total_paid'] as num?)?.toDouble() ?? 0.0;
+                    double curDue = (supData.first['outstanding_due'] as num?)?.toDouble() ?? 0.0;
+                    
+                    await txn.update(
+                      'suppliers',
+                      {
+                        'total_paid': curPaid + amt,
+                        'outstanding_due': (curDue - amt) > 0 ? (curDue - amt) : 0.0,
+                      },
+                      where: 'id = ?',
+                      whereArgs: [supId]
+                    );
+                  }
+                });
+                
+                Navigator.pop(ctx);
+                _loadPayments();
+                widget.onSaved();
+              },
+              child: saving ? const CircularProgressIndicator() : const Text('Pay'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat('#,##,##0.00');
+    final supName = widget.items.first['supplier_name'] ?? 'Unknown';
+    final dateStr = widget.items.first['purchase_date']?.toString().substring(0, 10) ?? '';
+    final due = widget.totalBillAmt - _totalPaid;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Purchase Invoice', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+              if (!_loading && due <= 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(8)),
+                  child: Text('FULLY PAID', style: GoogleFonts.outfit(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 12)),
+                )
+              else if (!_loading && due > 0 && due < widget.totalBillAmt)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(8)),
+                  child: Text('PARTIAL', style: GoogleFonts.outfit(color: Colors.orange.shade800, fontWeight: FontWeight.bold, fontSize: 12)),
+                )
+            ],
+          ),
+          Text('Supplier: $supName | Date: $dateStr', style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey.shade700)),
+          const Divider(height: 24),
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.items.length,
+              itemBuilder: (context, i) {
+                final item = widget.items[i];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item['product_name'] ?? '', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text('${item['quantity']} ${item['unit'] ?? 'PCS'} x ₹${item['purchase_rate']}', style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      Text('₹${fmt.format(item['total_amount'] ?? 0)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const Divider(height: 16),
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Bill Amount', style: GoogleFonts.outfit(fontSize: 14)),
+                Text('₹${fmt.format(widget.totalBillAmt)}', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Paid', style: GoogleFonts.outfit(fontSize: 14, color: Colors.green.shade700)),
+                Text('₹${fmt.format(_totalPaid)}', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Remaining Due', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('₹${fmt.format(due > 0 ? due : 0)}', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.royalBlue)),
+              ],
+            ),
+            if (due > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showPayDialog,
+                    icon: const Icon(Icons.payment, color: Colors.white),
+                    label: Text('Pay Balance (₹${fmt.format(due)})', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.royalBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}

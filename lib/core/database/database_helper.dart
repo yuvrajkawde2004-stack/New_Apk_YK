@@ -40,7 +40,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 17,
+      version: 18,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -241,6 +241,19 @@ class DatabaseHelper {
       await db.execute("CREATE INDEX IF NOT EXISTS idx_customer_payments_bill_id ON customer_payments(bill_id)");
       await db.execute("CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier_name ON supplier_payments(supplier_name)");
     }
+
+    if (oldVersion < 18) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS purchase_bill_payments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          bill_key TEXT NOT NULL,
+          amount_paid REAL NOT NULL,
+          payment_date TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_bill_payments_bill_key ON purchase_bill_payments(bill_key)");
+    }
   }
 
   // ==========================
@@ -428,6 +441,18 @@ class DatabaseHelper {
     await db.execute("CREATE INDEX IF NOT EXISTS idx_customer_payments_customer_id ON customer_payments(customer_id)");
     await db.execute("CREATE INDEX IF NOT EXISTS idx_customer_payments_bill_id ON customer_payments(bill_id)");
     await db.execute("CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier_name ON supplier_payments(supplier_name)");
+
+    // PURCHASE BILL PAYMENTS TABLE
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS purchase_bill_payments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bill_key TEXT NOT NULL,
+        amount_paid REAL NOT NULL,
+        payment_date TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_bill_payments_bill_key ON purchase_bill_payments(bill_key)");
 
     // Insert Dummy Product for Custom Items (id = 0)
     try {
@@ -688,6 +713,22 @@ class DatabaseHelper {
     return await db.query(
       'purchases',
       orderBy: 'id DESC',
+    );
+  }
+
+  Future<int> insertPurchaseBillPayment(Map<String, dynamic> payment) async {
+    final db = await database;
+    payment['created_at'] = DateTime.now().toIso8601String();
+    return await db.insert('purchase_bill_payments', payment);
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchaseBillPayments(String billKey) async {
+    final db = await database;
+    return await db.query(
+      'purchase_bill_payments',
+      where: 'bill_key = ?',
+      whereArgs: [billKey],
+      orderBy: 'payment_date ASC, id ASC',
     );
   }
 

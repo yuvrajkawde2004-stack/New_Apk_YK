@@ -544,12 +544,20 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
         
         // 4. Add SINGLE Payment Log
         if (paid > 0) {
+          final pDate = DateTime.now().toIso8601String();
           await txn.insert('supplier_payments', {
             'supplier_name': sup,
             'amount_paid': paid,
             'payment_method': 'Cash',
-            'payment_date': DateTime.now().toIso8601String(),
-            'created_at': DateTime.now().toIso8601String(),
+            'payment_date': pDate,
+            'created_at': pDate,
+          });
+          
+          await txn.insert('purchase_bill_payments', {
+            'bill_key': nowStr,
+            'amount_paid': paid,
+            'payment_date': pDate,
+            'created_at': pDate,
           });
         }
       });
