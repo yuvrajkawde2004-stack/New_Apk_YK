@@ -346,6 +346,49 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
     ).animate().fadeIn().slideY(begin: 0.1, duration: 300.ms);
   }
 
+  Widget _buildPaymentStatusBadge() {
+    final double total = _totalPurchaseAmount;
+    final double paid = double.tryParse(_paidCtrl.text) ?? 0.0;
+    final double due = (total - paid) > 0 ? (total - paid) : 0.0;
+    
+    if (total == 0) return const SizedBox.shrink();
+
+    String statusText;
+    Color statusColor;
+    IconData statusIcon;
+
+    if (paid == 0) {
+      statusText = 'UNPAID (Due: ₹${due.toStringAsFixed(2)})';
+      statusColor = Colors.red.shade700;
+      statusIcon = Icons.error_outline;
+    } else if (paid < total) {
+      statusText = 'PARTIAL (Due: ₹${due.toStringAsFixed(2)})';
+      statusColor = Colors.orange.shade700;
+      statusIcon = Icons.warning_amber_rounded;
+    } else {
+      statusText = 'FULLY PAID';
+      statusColor = Colors.green.shade700;
+      statusIcon = Icons.check_circle_outline;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: statusColor.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(statusIcon, color: statusColor, size: 18),
+          const SizedBox(width: 8),
+          Text(statusText, style: GoogleFonts.outfit(color: statusColor, fontWeight: FontWeight.bold, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPaymentSection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -368,8 +411,11 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
           TextFormField(
             controller: _paidCtrl,
             keyboardType: TextInputType.number,
+            onChanged: (val) => setState(() {}),
             decoration: const InputDecoration(labelText: 'Amount Paid Now (₹)', prefixText: '₹ ', filled: true, fillColor: Colors.white, border: OutlineInputBorder()),
           ),
+          const SizedBox(height: 12),
+          _buildPaymentStatusBadge(),
           const SizedBox(height: 12),
           TextFormField(
             controller: _noteCtrl,
