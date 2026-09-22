@@ -122,7 +122,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
                             ),
                             title: Text(p['product_name'] ?? 'Unknown', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15)),
                             subtitle: Padding(
-                              padding: const EdgeInsets.topOnly(top: 4.0),
+                              padding: const EdgeInsets.only(top: 4.0),
                               child: Text('Qty: $qty  |  Rate: ₹${fmt.format(rate)}', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
                             ),
                             trailing: Column(

@@ -227,7 +227,7 @@ class _SupplierPaymentsScreenState extends State<SupplierPaymentsScreen> {
                             ),
                             title: Text('Payment Received', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
                             subtitle: Padding(
-                              padding: const EdgeInsets.topOnly(top: 4.0),
+                              padding: const EdgeInsets.only(top: 4.0),
                               child: Text(dateStr, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500)),
                             ),
                             trailing: Column(
