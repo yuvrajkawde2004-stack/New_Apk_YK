@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/database/database_helper.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/services/ledger_pdf_service.dart';
 import 'add_purchase_form_screen.dart';
 import 'supplier_products_screen.dart';
 import 'supplier_payments_screen.dart';
@@ -55,6 +59,61 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> {
     });
   }
 
+  Future<void> _downloadPdf() async {
+    final String supName = _currentSupplier['name'];
+    final phone = _currentSupplier['phone']?.toString() ?? '';
+    final due = (_currentSupplier['outstanding_due'] as num?)?.toDouble() ?? 0.0;
+    
+    // Combine purchases and payments into transactions format
+    final List<Map<String, dynamic>> transactions = [];
+    
+    final pur = await DatabaseHelper.instance.getPurchasesBySupplier(supName);
+    for (var p in pur) {
+      transactions.add({
+        'is_bill': true,
+        'date': p['purchase_date']?.toString().substring(0, 10) ?? '',
+        'description': 'Purchase (${p['product_name'] ?? 'Items'})',
+        'total_amt': (p['total_amount'] as num?)?.toDouble() ?? 0.0,
+        'paid_amt': (p['paid_amount'] as num?)?.toDouble() ?? 0.0,
+      });
+    }
+
+    final pay = await DatabaseHelper.instance.getSupplierPayments(supName);
+    for (var p in pay) {
+      transactions.add({
+        'is_bill': false,
+        'date': p['payment_date']?.toString().substring(0, 10) ?? '',
+        'description': 'Payment (${p['payment_method'] ?? 'Cash'})',
+        'total_amt': 0.0,
+        'paid_amt': (p['amount_paid'] as num?)?.toDouble() ?? 0.0,
+      });
+    }
+
+    try {
+      final pdfBytes = await LedgerPdfService.generateLedgerPdf(
+        title: 'Supplier Ledger',
+        partyName: supName,
+        phone: phone,
+        totalOutstanding: due,
+        transactions: transactions,
+      );
+
+      final tempDir = await getTemporaryDirectory();
+      final sanitizedName = supName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final file = File('${tempDir.path}/Supplier_Ledger_$sanitizedName.pdf');
+      await file.writeAsBytes(pdfBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Ledger for $supName',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating PDF: $e')));
+      }
+    }
+  }
+
   String _getInitials(String name) {
     if (name.isEmpty) return 'S';
     List<String> parts = name.trim().split(' ');
@@ -81,9 +140,24 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
+          PopupMenuButton<String>(
+            onSelected: (val) {
+              if (val == 'pdf') {
+                _downloadPdf();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'pdf',
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, color: Colors.red.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Download PDF', style: GoogleFonts.inter()),
+                  ],
+                ),
+              ),
+            ],
           )
         ],
       ),
