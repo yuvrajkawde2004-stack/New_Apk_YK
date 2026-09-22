@@ -460,396 +460,306 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     }
   }
 
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'C';
+    List<String> parts = name.trim().split(' ');
+    if (parts.length > 1) {
+      return "$name".substring(0, 1).toUpperCase(); // mock logic for demo
+    }
+    return name.substring(0, 1).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasDue = _currentOutstanding > 0;
+    if (_isLoading) {
+      return const Scaffold(backgroundColor: Color(0xFFF8FAFC), body: Center(child: CircularProgressIndicator(color: Color(0xFF064E3B))));
+    }
+
+    // calculate total purchase, paid, due
+    double totalPurchase = 0;
+    double totalPaid = 0;
+    for (var bill in _customerBills) {
+       totalPurchase += (bill['grand_total'] as num?)?.toDouble() ?? 0.0;
+       totalPaid += (bill['paid_amount'] as num?)?.toDouble() ?? 0.0;
+    }
+    final totalDue = _currentOutstanding;
+
+    // Use string formatting instead of NumberFormat directly to avoid import issues if intl is not imported properly
+    String formatAmt(num amt) {
+      return amt.toStringAsFixed(0).replaceAll(RegExp(r'\B(?=(\d{3})+(?!\d))'), ',');
+    }
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(widget.customer.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: Text('Customer Details', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 20)),
+        backgroundColor: const Color(0xFF064E3B),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.royalBlue),
-            tooltip: 'Download Ledger PDF',
-            onPressed: _downloadLedgerPdf,
-          ),
-          const SizedBox(width: 8),
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () { /* Edit Customer Logic */ },
+          )
         ],
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Header Card
+            // Top Profile Card
             Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 4))],
               ),
               child: Column(
                 children: [
-                  Hero(
-                    tag: 'customer_avatar_${widget.customer.id}',
-                    child: CircleAvatar(
-                      radius: 48,
-                      backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                      child: Text(
-                        widget.customer.name[0].toUpperCase(),
-                        style: GoogleFonts.outfit(
-                          color: AppColors.royalBlue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 36,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Hero(
-                    tag: 'customer_name_${widget.customer.id}',
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Text(
-                        widget.customer.name,
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimaryLight,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.customer.phone ?? 'No Phone Number',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      color: AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // WhatsApp / Message Buttons
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _showSelectBillWhatsAppSheet(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.12),
-                          foregroundColor: const Color(0xFF25D366),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade600,
+                          shape: BoxShape.circle,
                         ),
-                        icon: const Icon(Icons.chat_bubble_rounded, size: 20),
-                        label: Text('WhatsApp', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                        alignment: Alignment.center,
+                        child: Text(_getInitials(widget.customer.name), style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24)),
                       ),
                       const SizedBox(width: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => _showSelectBillWhatsAppSheet(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.royalBlue.withValues(alpha: 0.1),
-                          foregroundColor: AppColors.royalBlue,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.customer.name, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                            const SizedBox(height: 4),
+                            if (widget.customer.phone != null && widget.customer.phone!.isNotEmpty)
+                              Row(
+                                children: [
+                                  Icon(Icons.phone_outlined, size: 14, color: Colors.grey.shade500),
+                                  const SizedBox(width: 4),
+                                  Text(widget.customer.phone!, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade600)),
+                                ],
+                              ),
+                            const SizedBox(height: 4),
+                            if (widget.customer.notes != null && widget.customer.notes!.isNotEmpty)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade500),
+                                  const SizedBox(width: 4),
+                                  Expanded(child: Text(widget.customer.notes!, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade600))),
+                                ],
+                              ),
+                          ],
                         ),
-                        icon: const Icon(Icons.message_rounded, size: 20),
-                        label: Text('Message', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                      ),
+                      )
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Balance Due Chip
-                  GestureDetector(
-                    onTap: hasDue ? _showSettleDuesSheet : null,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: hasDue ? AppColors.softOrange.withValues(alpha: 0.1) : AppColors.emeraldGreen.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: hasDue ? AppColors.softOrange.withValues(alpha: 0.3) : AppColors.emeraldGreen.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            hasDue ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
-                            color: hasDue ? AppColors.softOrange : AppColors.emeraldGreen,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            hasDue ? 'Outstanding Due: ₹${_currentOutstanding.toStringAsFixed(0)}\n(Tap to Pay)' : 'Clear (No Dues)',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: hasDue ? AppColors.softOrange : AppColors.emeraldGreen,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // 🌟 PRIMARY ACTION: CREATE NEW BILL (ONLY ACCESSIBLE HERE)
-                  GestureDetector(
-                    onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BillingScreen(customer: widget.customer),
-                        ),
-                      );
-                      _loadCustomerBills();
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.royalBlue, Color(0xFF2563EB)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.royalBlue.withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 22),
-                          const SizedBox(width: 10),
-                          Text(
-                            '+ CREATE NEW BILL',
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(child: _buildFinancialBlock('Total Purchase', totalPurchase, Colors.blue, formatAmt)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildFinancialBlock('Paid', totalPaid, Colors.green, formatAmt)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildFinancialBlock('Due', totalDue, Colors.red, formatAmt)),
+                    ],
+                  )
                 ],
               ),
             ),
-            
-            // Billing History Section
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Billing & Invoice History',
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _customerBills.isEmpty
-                          ? const Text('No bills found for this customer yet.')
-                          : Column(
-                              children: _customerBills.map((b) {
-                                final dueAmt = (b['due_amount'] as num?)?.toDouble() ?? 0.0;
-                                final isPaid = dueAmt <= 0;
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _buildMockInvoiceCard(
-                                    b['bill_number'] ?? '', 
-                                    '₹ ${b['grand_total']}', 
-                                    b['bill_date'] ?? '', 
-                                    isPaid, 
-                                    dueAmt,
-                                    () {
-                                      _openWhatsAppChat(b);
-                                    },
-                                    onLongPress: () async {
-                                      final bool? confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                          title: Text('Edit Bill', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                                          content: Text('Are you sure you want to edit this bill?', style: GoogleFonts.outfit()),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(ctx, false),
-                                              child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () => Navigator.pop(ctx, true),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppColors.royalBlue,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                              ),
-                                              child: Text('OK', style: GoogleFonts.outfit(color: Colors.white)),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      
-                                      if (confirm == true) {
-                                        if (context.mounted) {
-                                          await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(builder: (_) => BillingScreen(billToEdit: b)),
-                                          );
-                                          _loadCustomerBills();
-                                        }
-                                      }
-                                    },
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+            const SizedBox(height: 24),
 
-  Widget _buildMockInvoiceCard(String id, String amount, String date, bool paid, double dueAmount, VoidCallback onShare, {VoidCallback? onLongPress}) {
-    final statusColor = paid ? const Color(0xFF10B981) : const Color(0xFFEF4444);
-    return GestureDetector(
-      onLongPress: onLongPress,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: statusColor.withValues(alpha: 0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+            // Quick Actions
+            Text('Quick Actions', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1F2937))),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildQuickAction(Icons.receipt_long_outlined, 'Create Bill', const Color(0xFF064E3B), () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BillingScreen(selectedCustomer: widget.customer),
+                    ),
+                  ).then((_) => _loadCustomerBills());
+                }),
+                _buildQuickAction(Icons.currency_rupee_outlined, 'Add Payment', const Color(0xFF10B981), _showSettleDuesSheet),
+                _buildQuickAction(Icons.picture_as_pdf_outlined, 'Share Ledger', Colors.orange, () {
+                  if (_customerBills.isNotEmpty) _openWhatsAppChat(_customerBills.first);
+                }),
+                _buildQuickAction(Icons.more_horiz_outlined, 'More', Colors.grey.shade600, () {}),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
+            const SizedBox(height: 24),
+
+            // Customer Summary
+            Text('Customer Summary', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1F2937))),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
               child: Row(
                 children: [
-                  // Status Circle Indicator: RED for Pending, GREEN for Paid
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: statusColor, width: 1.8),
-                    ),
-                    child: Icon(
-                      paid ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
-                      color: statusColor,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          id,
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            const Icon(Icons.receipt_outlined, size: 16, color: Colors.blue),
+                            const SizedBox(width: 6),
+                            Text('Total Bills', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          date,
-                          style: GoogleFonts.outfit(color: AppColors.textSecondaryLight, fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 4),
+                        Text('${_customerBills.length}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  Container(width: 1, height: 40, color: Colors.grey.shade200),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.green),
+                            const SizedBox(width: 6),
+                            Text('Last Bill', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600)),
+                          ],
                         ),
+                        const SizedBox(height: 4),
+                        Text(_customerBills.isNotEmpty ? (_customerBills.first['bill_date'] ?? 'N/A') : 'N/A', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            const SizedBox(height: 24),
+
+            // Bill History
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  amount,
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimaryLight),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    paid ? 'Paid ✅' : 'Due: ₹${dueAmount.toStringAsFixed(0)} 🔴',
-                    style: GoogleFonts.outfit(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                Text('Recent Transactions', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF1F2937))),
+                if (_customerBills.length > 3)
+                  Text('See All', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF064E3B))),
               ],
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 22),
-              onPressed: onShare,
-              tooltip: 'Send on WhatsApp',
-            ),
+            const SizedBox(height: 12),
+            if (_customerBills.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('No bills yet', style: GoogleFonts.inter(color: Colors.grey)),
+                ),
+              )
+            else
+              ..._customerBills.map((bill) {
+                final isPaid = bill['paid'] == true || ((bill['due_amount'] as num?)?.toDouble() ?? 0) <= 0;
+                final isPartial = !isPaid && ((bill['paid_amount'] as num?)?.toDouble() ?? 0) > 0;
+                
+                String status = isPaid ? 'Paid' : (isPartial ? 'Partial' : 'Due');
+                Color statusColor = isPaid ? const Color(0xFF10B981) : (isPartial ? Colors.orange : Colors.red);
+                
+                return GestureDetector(
+                  onTap: () => _showBillOptionsBottomSheet(bill),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
+                          child: const Icon(Icons.receipt_long_outlined, color: Color(0xFF064E3B)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(bill['bill_number'] ?? 'Bill', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                              const SizedBox(height: 4),
+                              Text(bill['bill_date'] ?? '', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('â‚¹ $(formatAmt(bill['grand_total'] ?? 0))', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                            const SizedBox(height: 4),
+                            Text(status, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor)),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                );
+              }),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildFinancialBlock(String label, double amount, MaterialColor color, String Function(num) formatAmt) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: GoogleFonts.inter(fontSize: 11, color: color.shade700, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 6),
+          Text('â‚¹ $(formatAmt(amount))', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: color.shade900), maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
   void _showBillOptionsBottomSheet(Map<String, dynamic> bill) {
     showModalBottomSheet(
       context: context,
