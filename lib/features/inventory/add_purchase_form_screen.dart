@@ -178,18 +178,25 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
           Text('Supplier Details', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black87)),
           const SizedBox(height: 16),
           if (_suppliers.isNotEmpty)
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String?>(
               value: _selectedSupplierName,
               decoration: const InputDecoration(labelText: 'Select Existing Supplier', border: OutlineInputBorder()),
-              items: _suppliers.map((s) => DropdownMenuItem(value: s['name'] as String, child: Text(s['name']))).toList(),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('--- Add New Supplier ---')),
+                ..._suppliers.map((s) => DropdownMenuItem<String?>(value: s['name'] as String, child: Text(s['name'])))
+              ],
               onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    _selectedSupplierName = val;
+                setState(() {
+                  _selectedSupplierName = val;
+                  if (val != null) {
                     _supCtrl.text = val;
-                  });
-                  _loadSupplierLedger(val);
-                }
+                    _loadSupplierLedger(val);
+                  } else {
+                    _supCtrl.clear();
+                    _phoneCtrl.clear();
+                    _selectedSupplierLedger.clear();
+                  }
+                });
               },
             ),
           
@@ -213,8 +220,8 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Paid (Jama): Γé╣${fmt.format(paid)}', style: GoogleFonts.outfit(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
-                        Text('Due (Baki): Γé╣${fmt.format(due)}', style: GoogleFonts.outfit(color: due > 0 ? Colors.red : Colors.grey.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Paid (Jama): ₹${fmt.format(paid)}', style: GoogleFonts.outfit(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Due (Baki): ₹${fmt.format(due)}', style: GoogleFonts.outfit(color: due > 0 ? Colors.red : Colors.grey.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),
                     if (_loadingLedger)
@@ -230,7 +237,7 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
                           children: [
                             Expanded(child: Text('${t['date']} - ${t['desc']}', style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey.shade800))),
                             Text(
-                              t['type'] == 'Payment' ? 'Jama: Γé╣${fmt.format(t['amt'])}' : 'Bill: Γé╣${fmt.format(t['amt'])}',
+                              t['type'] == 'Payment' ? 'Jama: ₹${fmt.format(t['amt'])}' : 'Bill: ₹${fmt.format(t['amt'])}',
                               style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: t['type'] == 'Payment' ? Colors.green.shade700 : Colors.red.shade700),
                             ),
                           ],
@@ -242,19 +249,21 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
               );
             }),
             
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _supCtrl,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Or Type Supplier Name', border: OutlineInputBorder()),
-            validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _phoneCtrl,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'Supplier Phone (Optional)', prefixText: '+91 ', border: OutlineInputBorder()),
-          ),
+          if (_selectedSupplierName == null || _suppliers.isEmpty) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _supCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'New Supplier Name *', border: OutlineInputBorder()),
+              validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Supplier Phone (Optional)', prefixText: '+91 ', border: OutlineInputBorder()),
+            ),
+          ]
         ],
       ),
     );

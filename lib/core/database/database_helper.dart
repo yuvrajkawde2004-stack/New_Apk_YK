@@ -40,7 +40,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 18,
+      version: 19,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -254,6 +254,11 @@ class DatabaseHelper {
       ''');
       await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_bill_payments_bill_key ON purchase_bill_payments(bill_key)");
     }
+
+    if (oldVersion < 19) {
+      try { await db.execute("ALTER TABLE suppliers ADD COLUMN email TEXT"); } catch (_) {}
+      try { await db.execute("ALTER TABLE suppliers ADD COLUMN gst_number TEXT"); } catch (_) {}
+    }
   }
 
   // ==========================
@@ -388,6 +393,8 @@ class DatabaseHelper {
         name TEXT NOT NULL UNIQUE,
         phone TEXT,
         address TEXT,
+        email TEXT,
+        gst_number TEXT,
         total_purchased REAL DEFAULT 0,
         total_paid REAL DEFAULT 0,
         outstanding_due REAL DEFAULT 0,

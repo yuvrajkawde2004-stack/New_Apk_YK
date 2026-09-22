@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/database/database_helper.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import '../../core/database/database_helper.dart';
 import 'add_purchase_form_screen.dart';
+import 'supplier_products_screen.dart';
+import 'supplier_payments_screen.dart';
 
 class SupplierLedgerScreen extends StatefulWidget {
   final Map<String, dynamic> supplier;
@@ -13,32 +14,33 @@ class SupplierLedgerScreen extends StatefulWidget {
   State<SupplierLedgerScreen> createState() => _SupplierLedgerScreenState();
 }
 
-class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> {
   Map<String, dynamic> _currentSupplier = {};
-  List<Map<String, dynamic>> _purchases = [];
-  List<Map<String, dynamic>> _payments = [];
   bool _loading = true;
+  int _productCount = 0;
+  int _paymentCount = 0;
+
+  static const Color primaryGreen = Color(0xFF064E3B);
+  static const Color badgeGreen = Color(0xFFD1FAE5);
+  static const Color badgeTextGreen = Color(0xFF059669);
+  static const Color redDueBg = Color(0xFFFEE2E2);
+  static const Color redDueText = Color(0xFFDC2626);
+  static const Color blueBg = Color(0xFFE0F2FE);
+  static const Color blueText = Color(0xFF0284C7);
+  static const Color backgroundLight = Color(0xFFF8FAFC);
+  static const Color buttonGreen = Color(0xFF10B981);
 
   @override
   void initState() {
     super.initState();
     _currentSupplier = widget.supplier;
-    _tabController = TabController(length: 2, vsync: this);
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
     final String supName = _currentSupplier['name'];
     
-    // Refresh supplier data for updated due
     final sups = await DatabaseHelper.instance.getSuppliers();
     final updatedSup = sups.firstWhere((s) => s['name'] == supName, orElse: () => _currentSupplier);
     
@@ -47,228 +49,145 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with Single
     
     setState(() {
       _currentSupplier = updatedSup;
-      _purchases = pur;
-      _payments = pay;
+      _productCount = pur.length;
+      _paymentCount = pay.length;
       _loading = false;
     });
   }
 
-  void _showAddPaymentDialog() {
-    final amtCtrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add Payment', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: amtCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Amount Paid (₹)',
-                  prefixIcon: const Icon(Icons.currency_rupee_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Enter amount';
-                  if (double.tryParse(v) == null) return 'Invalid amount';
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.royalBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () async {
-              if (formKey.currentState!.validate()) {
-                await DatabaseHelper.instance.recordSupplierPayment(
-                  supplierName: _currentSupplier['name'],
-                  amountPaid: double.parse(amtCtrl.text),
-                  paymentMethod: 'Cash',
-                );
-                Navigator.pop(ctx);
-                _loadData();
-              }
-            },
-            child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPurchasesTab() {
-    if (_purchases.isEmpty) {
-      return const Center(child: Text('No purchases yet.', style: TextStyle(color: Colors.grey)));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: _purchases.length,
-      itemBuilder: (context, index) {
-        final p = _purchases[index];
-        final date = DateTime.tryParse(p['purchase_date'] ?? '') ?? DateTime.now();
-        final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(date);
-        
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue.withOpacity(0.1),
-              child: const Icon(Icons.shopping_bag_rounded, color: Colors.blue),
-            ),
-            title: Text('Bill: ₹${p['total_amount']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            subtitle: Text(dateStr, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-            trailing: Text(
-              '${p['status'] ?? 'COMPLETED'}',
-              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          ),
-        ).animate().fadeIn(delay: Duration(milliseconds: 50 * index)).slideX();
-      },
-    );
-  }
-
-  Widget _buildPaymentsTab() {
-    if (_payments.isEmpty) {
-      return const Center(child: Text('No payments yet.', style: TextStyle(color: Colors.grey)));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: _payments.length,
-      itemBuilder: (context, index) {
-        final p = _payments[index];
-        final date = DateTime.tryParse(p['payment_date'] ?? '') ?? DateTime.now();
-        final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(date);
-        
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.green.withOpacity(0.1),
-              child: const Icon(Icons.currency_rupee_rounded, color: Colors.green),
-            ),
-            title: Text('Paid: ₹${p['amount_paid']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
-            subtitle: Text(dateStr, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-            trailing: Text(
-              p['payment_method'] ?? 'CASH',
-              style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          ),
-        ).animate().fadeIn(delay: Duration(milliseconds: 50 * index)).slideX();
-      },
-    );
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    List<String> parts = name.trim().split(' ');
+    if (parts.length > 1) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
+    final double totalPurchased = (_currentSupplier['total_purchased'] as num?)?.toDouble() ?? 0.0;
+    final double totalPaid = (_currentSupplier['total_paid'] as num?)?.toDouble() ?? 0.0;
     final double due = (_currentSupplier['outstanding_due'] as num?)?.toDouble() ?? 0.0;
-    
+    final fmt = NumberFormat('#,##,##0');
+
+    final phone = (_currentSupplier['phone']?.toString().isNotEmpty ?? false) ? _currentSupplier['phone'].toString() : 'Not provided';
+    final email = (_currentSupplier['email']?.toString().isNotEmpty ?? false) ? _currentSupplier['email'].toString() : 'Not provided';
+    final address = (_currentSupplier['address']?.toString().isNotEmpty ?? false) ? _currentSupplier['address'].toString() : 'Not provided';
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: backgroundLight,
       appBar: AppBar(
-        title: Text(_currentSupplier['name'] ?? 'Supplier', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.royalBlue,
+        title: Text(_currentSupplier['name'] ?? 'Supplier Details', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+        backgroundColor: primaryGreen,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () {},
+          )
+        ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Header section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.royalBlue, Color(0xFF1E293B)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+          ? const Center(child: CircularProgressIndicator(color: primaryGreen))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Top Summary Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
                     ),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(32),
-                      bottomRight: Radius.circular(32),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'OUTSTANDING DUE',
-                        style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₹${due.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: due > 0 ? const Color(0xFFFDA4AF) : Colors.greenAccent,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: buttonGreen,
+                              child: Text(_getInitials(_currentSupplier['name']), style: GoogleFonts.inter(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(child: Text(_currentSupplier['name'], style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87))),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(color: badgeGreen, borderRadius: BorderRadius.circular(6)),
+                                        child: Text('Active', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: badgeTextGreen)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _buildInfoRow(Icons.location_on_outlined, address),
+                                  const SizedBox(height: 6),
+                                  _buildInfoRow(Icons.phone_outlined, phone),
+                                  const SizedBox(height: 6),
+                                  _buildInfoRow(Icons.email_outlined, email),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.edit_outlined, color: Colors.grey, size: 20),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.phone_rounded, size: 16, color: Colors.white.withOpacity(0.8)),
-                          const SizedBox(width: 8),
-                          Text(
-                            (_currentSupplier['phone'] != null && _currentSupplier['phone'].toString().isNotEmpty) 
-                                ? _currentSupplier['phone'] 
-                                : 'No Phone',
-                            style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ],
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20.0),
+                          child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+                        ),
+                        Row(
+                          children: [
+                            _buildAmountBlock('Total Purchase', totalPurchased, blueBg, blueText),
+                            const SizedBox(width: 12),
+                            _buildAmountBlock('Paid', totalPaid, badgeGreen, badgeTextGreen),
+                            const SizedBox(width: 12),
+                            _buildAmountBlock('Due', due, redDueBg, redDueText),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                
-                // Tabs
-                TabBar(
-                  controller: _tabController,
-                  labelColor: AppColors.royalBlue,
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: AppColors.royalBlue,
-                  indicatorWeight: 3,
-                  tabs: const [
-                    Tab(text: 'Purchases (Kharedi)'),
-                    Tab(text: 'Payments (Dile)'),
-                  ],
-                ),
-                
-                // Tab Views
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildPurchasesTab(),
-                      _buildPaymentsTab(),
-                    ],
+                  const SizedBox(height: 24),
+
+                  // Menu Tiles
+                  _buildMenuTile(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Products from this Supplier',
+                    subtitle: '$_productCount Products',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => SupplierProductsScreen(supplierName: _currentSupplier['name'])),
+                      );
+                    },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  _buildMenuTile(
+                    icon: Icons.history_outlined,
+                    title: 'Payment History',
+                    subtitle: '$_paymentCount Payments',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => SupplierPaymentsScreen(supplierName: _currentSupplier['name'])),
+                      ).then((_) => _loadData());
+                    },
+                  ),
+                ],
+              ),
             ),
-            
-      // Bottom Action Bar
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -277,45 +196,92 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with Single
             BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
           ],
         ),
-        child: Row(
+        child: SizedBox(
+          height: 54,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
+              elevation: 0,
+            ),
+            icon: const Icon(Icons.add),
+            label: Text('Add Purchase', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddPurchaseFormScreen(initialSupplierName: _currentSupplier['name']),
+                ),
+              );
+              _loadData(); // Refresh when back from purchase screen
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey.shade500),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.inter(fontSize: 13, color: Colors.grey.shade600),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAmountBlock(String label, double amount, Color bgColor, Color textColor) {
+    final fmt = NumberFormat('#,##,##0');
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
           children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.currency_rupee_rounded),
-                label: const Text('Add Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                onPressed: _showAddPaymentDialog,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.royalBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.add_shopping_cart_rounded),
-                label: const Text('Add Purchase', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AddPurchaseFormScreen(initialSupplierName: _currentSupplier['name']),
-                    ),
-                  );
-                  _loadData(); // Refresh when back from purchase screen
-                },
-              ),
-            ),
+            Text(label, style: GoogleFonts.inter(fontSize: 11, color: textColor.withOpacity(0.8), fontWeight: FontWeight.w500)),
+            const SizedBox(height: 4),
+            Text('₹ ${fmt.format(amount)}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: textColor)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMenuTile({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: backgroundLight,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: Colors.black87),
+        ),
+        title: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)),
+        subtitle: Text(subtitle, style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 13)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        onTap: onTap,
       ),
     );
   }
