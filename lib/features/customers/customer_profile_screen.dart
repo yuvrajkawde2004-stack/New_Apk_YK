@@ -586,7 +586,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => BillingScreen(selectedCustomer: widget.customer),
+                      builder: (context) => BillingScreen(customer: widget.customer),
                     ),
                   ).then((_) => _loadCustomerBills());
                 }),
@@ -707,7 +707,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('â‚¹ $(formatAmt(bill['grand_total'] ?? 0))', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
+                            Text('â‚¹ ${formatAmt(bill['grand_total'] ?? 0))', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937))),
                             const SizedBox(height: 4),
                             Text(status, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor)),
                           ],
@@ -734,7 +734,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         children: [
           Text(label, style: GoogleFonts.inter(fontSize: 11, color: color.shade700, fontWeight: FontWeight.w500)),
           const SizedBox(height: 6),
-          Text('â‚¹ $(formatAmt(amount))', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: color.shade900), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text('â‚¹ ${formatAmt(amount))', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: color.shade900), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );

@@ -151,7 +151,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             padding: const EdgeInsets.only(right: 12),
             child: TextButton.icon(
               onPressed: () {
-                ContactSelectionSheet.show(context).then((_) => _loadCustomers());
+                ContactSelectionSheet.show(context);
               },
               icon: const Icon(Icons.add, color: primaryGreen, size: 18),
               label: Text('Add Customer', style: GoogleFonts.inter(color: primaryGreen, fontWeight: FontWeight.w600, fontSize: 13)),
@@ -261,7 +261,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                 customer: customer,
                               ),
                             ),
-                          ).then((_) => _loadCustomers());
+                          );
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 12),
