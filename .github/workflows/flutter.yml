@@ -26,5 +26,7 @@ jobs:
 
       - run: flutter build apk --release
 
-         - name: Upload APK to free server
-     run: curl -T build/app/outputs/flutter-apk/app-release.apk https://bashupload.com/app-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
