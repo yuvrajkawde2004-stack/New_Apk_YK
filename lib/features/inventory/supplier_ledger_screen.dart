@@ -91,7 +91,7 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with Single
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.royalBlue,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
@@ -183,10 +183,10 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with Single
     final double due = (_currentSupplier['outstanding_due'] as num?)?.toDouble() ?? 0.0;
     
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: Text(_currentSupplier['name'] ?? 'Supplier', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.royalBlue,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
@@ -200,7 +200,7 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with Single
                   padding: const EdgeInsets.all(24),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppColors.primary, Color(0xFF1E293B)],
+                      colors: [AppColors.royalBlue, Color(0xFF1E293B)],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
@@ -245,9 +245,9 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with Single
                 // Tabs
                 TabBar(
                   controller: _tabController,
-                  labelColor: AppColors.primary,
+                  labelColor: AppColors.royalBlue,
                   unselectedLabelColor: Colors.grey,
-                  indicatorColor: AppColors.primary,
+                  indicatorColor: AppColors.royalBlue,
                   indicatorWeight: 3,
                   tabs: const [
                     Tab(text: 'Purchases (Kharedi)'),
@@ -296,7 +296,7 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> with Single
             Expanded(
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.royalBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

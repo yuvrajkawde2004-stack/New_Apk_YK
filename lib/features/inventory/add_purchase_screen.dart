@@ -75,12 +75,12 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.royalBlue,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                await DatabaseHelper.instance.insertSupplier({
+                await DatabaseHelper.instance.addSupplier({
                   'name': nameCtrl.text.trim(),
                   'phone': phoneCtrl.text.trim(),
                   'outstanding_due': 0.0,
@@ -99,10 +99,10 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text('Suppliers', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.royalBlue,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _loading
@@ -134,9 +134,9 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          backgroundColor: AppColors.royalBlue.withOpacity(0.1),
                           radius: 24,
-                          child: const Icon(Icons.storefront_rounded, color: AppColors.primary),
+                          child: const Icon(Icons.storefront_rounded, color: AppColors.royalBlue),
                         ),
                         title: Text(
                           sup['name'] ?? '',
