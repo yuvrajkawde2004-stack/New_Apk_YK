@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS shop_users (
 
 -- Products table
 CREATE TABLE IF NOT EXISTS products (
-  product_id TEXT PRIMARY KEY,
+  product_id TEXT,
   shop_id TEXT REFERENCES shops(shop_id),
   name TEXT NOT NULL,
   category TEXT,
@@ -41,30 +41,32 @@ CREATE TABLE IF NOT EXISTS products (
   stock INTEGER DEFAULT 0,
   image_url TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_id, product_id)
 );
 
 -- Insert dummy product for Custom Items (product_id = '0')
-INSERT OR IGNORE INTO products (product_id, name, category, stock) VALUES ('0', 'Custom Item / Service', 'System', 0);
+INSERT OR IGNORE INTO products (product_id, shop_id, name, category, stock) VALUES ('0', 'system', 'Custom Item / Service', 'System', 0);
 
 
 -- Customers table
 CREATE TABLE IF NOT EXISTS customers (
-  customer_id TEXT PRIMARY KEY,
+  customer_id TEXT,
   shop_id TEXT REFERENCES shops(shop_id),
   name TEXT NOT NULL,
   mobile TEXT,
   address TEXT,
   outstanding_balance REAL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_id, customer_id)
 );
 
 -- Bills (Invoices) table
 CREATE TABLE IF NOT EXISTS bills (
-  bill_id TEXT PRIMARY KEY,
+  bill_id TEXT,
   shop_id TEXT REFERENCES shops(shop_id),
-  customer_id TEXT REFERENCES customers(customer_id),
+  customer_id TEXT,
   bill_number TEXT,
   subtotal REAL DEFAULT 0,
   discount REAL DEFAULT 0,
@@ -73,14 +75,16 @@ CREATE TABLE IF NOT EXISTS bills (
   payment_status TEXT, -- 'paid', 'unpaid', 'partial'
   amount_paid REAL DEFAULT 0,
   invoice_url TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_id, bill_id)
 );
 
 -- Bill Items table
 CREATE TABLE IF NOT EXISTS bill_items (
   item_id TEXT PRIMARY KEY,
-  bill_id TEXT REFERENCES bills(bill_id),
-  product_id TEXT REFERENCES products(product_id),
+  shop_id TEXT,
+  bill_id TEXT,
+  product_id TEXT,
   quantity INTEGER DEFAULT 1,
   price REAL DEFAULT 0,
   total REAL DEFAULT 0
@@ -90,8 +94,8 @@ CREATE TABLE IF NOT EXISTS bill_items (
 CREATE TABLE IF NOT EXISTS payments (
   payment_id TEXT PRIMARY KEY,
   shop_id TEXT REFERENCES shops(shop_id),
-  customer_id TEXT REFERENCES customers(customer_id),
-  bill_id TEXT REFERENCES bills(bill_id),
+  customer_id TEXT,
+  bill_id TEXT,
   amount REAL NOT NULL,
   payment_mode TEXT,
   payment_date DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -118,7 +122,7 @@ CREATE TABLE IF NOT EXISTS sync_logs (
 
 -- Suppliers table
 CREATE TABLE IF NOT EXISTS suppliers (
-  supplier_id TEXT PRIMARY KEY,
+  supplier_id TEXT,
   shop_id TEXT REFERENCES shops(shop_id),
   name TEXT NOT NULL,
   phone TEXT,
@@ -126,12 +130,13 @@ CREATE TABLE IF NOT EXISTS suppliers (
   total_purchased REAL DEFAULT 0,
   total_paid REAL DEFAULT 0,
   outstanding_due REAL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_id, supplier_id)
 );
 
 -- Purchases (Stock) table
 CREATE TABLE IF NOT EXISTS purchases (
-  purchase_id TEXT PRIMARY KEY,
+  purchase_id TEXT,
   shop_id TEXT REFERENCES shops(shop_id),
   product_id TEXT,
   product_name TEXT,
@@ -143,29 +148,32 @@ CREATE TABLE IF NOT EXISTS purchases (
   due_amount REAL DEFAULT 0,
   purchase_date TEXT,
   notes TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_id, purchase_id)
 );
 
 -- Supplier Payments table
 CREATE TABLE IF NOT EXISTS supplier_payments (
-  payment_id TEXT PRIMARY KEY,
+  payment_id TEXT,
   shop_id TEXT REFERENCES shops(shop_id),
   supplier_name TEXT,
   amount_paid REAL DEFAULT 0,
   payment_method TEXT,
   payment_date TEXT,
   notes TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_id, payment_id)
 );
 
 -- Customer Payments table
 CREATE TABLE IF NOT EXISTS customer_payments (
-  payment_id TEXT PRIMARY KEY,
+  payment_id TEXT,
   shop_id TEXT REFERENCES shops(shop_id),
   customer_id TEXT,
   bill_id TEXT,
   amount_paid REAL DEFAULT 0,
   payment_method TEXT,
   payment_date TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (shop_id, payment_id)
 );

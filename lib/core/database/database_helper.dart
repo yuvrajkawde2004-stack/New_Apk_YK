@@ -1657,14 +1657,15 @@ class DatabaseHelper {
     ''', [supplierName]);
   }
 
-  Future<List<Map<String, dynamic>>> getAllPurchases() async {
+  Future<List<Map<String, dynamic>>> getAllPurchases({int limit = 500, int offset = 0}) async {
     final db = await database;
     return await db.rawQuery('''
       SELECT p.*, pr.unit 
       FROM purchases p 
       LEFT JOIN products pr ON p.product_name = pr.product_name 
       ORDER BY p.id DESC
-    ''');
+      LIMIT ? OFFSET ?
+    ''', [limit, offset]);
   }
 
   Future<int> recordSupplierPayment({
@@ -1861,8 +1862,15 @@ class DatabaseHelper {
               if (table == 'supplier_payments' || table == 'customer_payments') cloudflareIdKey = 'payment_id';
 
               if (row.containsKey(cloudflareIdKey)) {
-                // SQLite uses INTEGER id, parse if necessary, but TEXT might be returned by Cloudflare
-                row['id'] = int.tryParse(row[cloudflareIdKey].toString()) ?? row[cloudflareIdKey];
+                // SQLite uses INTEGER id, parse if necessary
+                final parsedId = int.tryParse(row[cloudflareIdKey].toString());
+                if (parsedId != null) {
+                  row['id'] = parsedId;
+                } else {
+                  // For tables with AUTOINCREMENT INTEGER PK, passing a string UUID will crash.
+                  // We remove 'id' so SQLite generates a new integer ID locally.
+                  row.remove('id');
+                }
                 row.remove(cloudflareIdKey);
               }
               

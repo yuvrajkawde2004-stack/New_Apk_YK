@@ -64,7 +64,7 @@ syncApp.post('/', async (c) => {
     }
     else if (table === 'bills') {
        if (action === 'INSERT') {
-         const bill = data.bill;
+         const bill = data.bill || data;
          queries.push(c.env.DB.prepare(
           `INSERT INTO bills (bill_id, shop_id, customer_id, bill_number, subtotal, discount, grand_total, payment_method, payment_status, amount_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
          ).bind(recordId, shopId, bill.customer_id || null, bill.bill_number || `INV-${Date.now()}`, bill.subtotal || 0, bill.discount || 0, bill.grand_total || 0, bill.payment_method || 'Cash', bill.payment_status || 'paid', bill.amount_paid || bill.grand_total));
@@ -74,8 +74,8 @@ syncApp.post('/', async (c) => {
              const itemPrice = item.selling_price ?? item.price ?? 0;
              const productId = item.product_id?.toString() || "0";
              queries.push(c.env.DB.prepare(
-               `INSERT INTO bill_items (item_id, bill_id, product_id, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)`
-             ).bind(crypto.randomUUID(), recordId, productId, item.quantity || 1, itemPrice, item.total || 0));
+               `INSERT INTO bill_items (item_id, shop_id, bill_id, product_id, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?, ?)`
+             ).bind(crypto.randomUUID(), shopId, recordId, productId, item.quantity || 1, itemPrice, item.total || 0));
            }
          }
        }

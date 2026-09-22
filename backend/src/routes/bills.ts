@@ -39,8 +39,8 @@ billsApp.post('/', async (c) => {
     const itemId = crypto.randomUUID();
     queries.push(
       c.env.DB.prepare(
-        `INSERT INTO bill_items (item_id, bill_id, product_id, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)`
-      ).bind(itemId, billId, item.product_id, item.quantity, item.price, item.total)
+        `INSERT INTO bill_items (item_id, shop_id, bill_id, product_id, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(itemId, shopId, billId, item.product_id, item.quantity, item.price, item.total)
     );
 
     // Decrease stock
