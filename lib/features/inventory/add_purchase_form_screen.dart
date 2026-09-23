@@ -38,6 +38,10 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
   final List<String> _gstRates = ['0', '5', '12', '18', '28'];
   final List<String> _units = ['PCS', 'PAIR', 'KG', 'G', 'MTR', 'ROLL', 'BOX', 'PACK', 'SET', 'DOZ', 'LTR', 'ML'];
 
+  final TextEditingController _paidAmtCtrl = TextEditingController();
+  String _paymentMethod = 'Cash';
+  final List<String> _paymentMethods = ['Cash', 'UPI', 'Bank Transfer', 'Card'];
+
   static const Color primaryGreen = Color(0xFF064E3B);
   static const Color buttonGreen = Color(0xFF10B981);
   static const Color backgroundLight = Color(0xFFF8FAFC);
@@ -53,6 +57,7 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
 
   @override
   void dispose() {
+    _paidAmtCtrl.dispose();
     for (var item in _items) {
       item.nameCtrl.dispose();
       item.brandCtrl.dispose();
@@ -105,6 +110,27 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
     try {
       final db = await DatabaseHelper.instance.database;
       final date = DateTime.now().toIso8601String();
+      
+      double calculatedTotal = 0.0;
+      for (var item in _items) {
+        final rate = double.tryParse(item.rateCtrl.text) ?? 0.0;
+        final qty = int.tryParse(item.qtyCtrl.text) ?? 0;
+        calculatedTotal += (rate * qty);
+      }
+
+      double remainingPaid = double.tryParse(_paidAmtCtrl.text) ?? 0.0;
+      final double totalPaidAmt = remainingPaid;
+      
+      if (totalPaidAmt > calculatedTotal) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Paid amount cannot exceed the total bill amount (₹${calculatedTotal.toStringAsFixed(0)}).'), backgroundColor: Colors.red),
+          );
+          setState(() => _saving = false);
+        }
+        return;
+      }
+      
       double grandTotal = 0.0;
 
       await db.transaction((txn) async {
@@ -143,6 +169,16 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
             );
           }
 
+          double itemPaid = 0.0;
+          if (remainingPaid >= totalAmount) {
+            itemPaid = totalAmount;
+            remainingPaid -= totalAmount;
+          } else {
+            itemPaid = remainingPaid;
+            remainingPaid = 0.0;
+          }
+          double itemDue = totalAmount - itemPaid;
+
           // 2. Insert into purchases
           await txn.insert('purchases', {
             'product_id': productId,
@@ -151,8 +187,8 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
             'purchase_rate': rate,
             'quantity': qty,
             'total_amount': totalAmount,
-            'paid_amount': 0.0,
-            'due_amount': totalAmount,
+            'paid_amount': itemPaid,
+            'due_amount': itemDue,
             'purchase_date': date,
             'notes': notes,
             'created_at': date,
@@ -160,10 +196,23 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
         }
 
         // 3. Update supplier dues with grand total of all items
+        final actualDue = grandTotal - totalPaidAmt;
         await txn.rawUpdate(
-          'UPDATE suppliers SET total_purchased = total_purchased + ?, outstanding_due = outstanding_due + ? WHERE name = ?',
-          [grandTotal, grandTotal, _selectedSupplierName],
+          'UPDATE suppliers SET total_purchased = total_purchased + ?, total_paid = total_paid + ?, outstanding_due = outstanding_due + ? WHERE name = ?',
+          [grandTotal, totalPaidAmt, actualDue, _selectedSupplierName],
         );
+
+        // 4. Record Supplier Payment if any
+        if (totalPaidAmt > 0) {
+          await txn.insert('supplier_payments', {
+            'supplier_name': _selectedSupplierName,
+            'amount_paid': totalPaidAmt,
+            'payment_method': _paymentMethod,
+            'payment_date': date,
+            'notes': 'Advance payment during purchase',
+            'created_at': date,
+          });
+        }
       });
 
       if (mounted) {
@@ -459,6 +508,37 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
                       side: const BorderSide(color: primaryGreen, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Payment Section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2))]),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(color: primaryGreen, shape: BoxShape.circle),
+                              child: const Icon(Icons.payment_outlined, color: Colors.white, size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('Payment (Optional)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15, color: textDark)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: _buildTextField('Amount Paid (₹)', _paidAmtCtrl, keyboardType: TextInputType.number, prefixIcon: Icons.currency_rupee)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildDropdown('Payment Method', _paymentMethod, _paymentMethods, (v) => setState(() => _paymentMethod = v!), prefixIcon: Icons.account_balance_wallet_outlined)),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),

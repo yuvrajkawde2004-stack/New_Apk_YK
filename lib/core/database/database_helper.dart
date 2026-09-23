@@ -40,7 +40,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 19,
+      version: 20,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -259,6 +259,11 @@ class DatabaseHelper {
       try { await db.execute("ALTER TABLE suppliers ADD COLUMN email TEXT"); } catch (_) {}
       try { await db.execute("ALTER TABLE suppliers ADD COLUMN gst_number TEXT"); } catch (_) {}
     }
+
+    if (oldVersion < 20) {
+      try { await db.execute("ALTER TABLE customers ADD COLUMN email TEXT"); } catch (_) {}
+      try { await db.execute("ALTER TABLE customers ADD COLUMN category TEXT DEFAULT 'Regular'"); } catch (_) {}
+    }
   }
 
   // ==========================
@@ -306,6 +311,8 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         phone TEXT NOT NULL UNIQUE,
         address TEXT,
+        email TEXT,
+        category TEXT DEFAULT 'Regular',
         total_spent REAL DEFAULT 0,
         outstanding_balance REAL DEFAULT 0,
         created_at TEXT NOT NULL,

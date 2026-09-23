@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/database/database_helper.dart';
 
@@ -62,7 +63,7 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
     }
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool required = false, TextInputType? keyboardType}) {
+  Widget _buildTextField(String label, TextEditingController controller, {bool required = false, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -80,6 +81,7 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           style: GoogleFonts.inter(color: textDark, fontSize: 15),
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -132,7 +134,7 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildTextField('Supplier Name', _nameCtrl, required: true),
-                      _buildTextField('Mobile Number', _mobileCtrl, required: true, keyboardType: TextInputType.phone),
+                      _buildTextField('Mobile Number', _mobileCtrl, required: true, keyboardType: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)]),
                       _buildTextField('Email', _emailCtrl, keyboardType: TextInputType.emailAddress),
                       _buildTextField('Address', _addressCtrl, required: true),
                       _buildTextField('GST Number', _gstCtrl),

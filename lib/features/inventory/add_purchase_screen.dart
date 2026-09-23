@@ -83,35 +83,49 @@ class _AddPurchaseScreenState extends State<AddPurchaseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundLight,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: GestureDetector(
+        onTap: _showAddSupplierDialog,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF10B981).withOpacity(0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Add Supplier',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+         .scale(begin: const Offset(1, 1), end: const Offset(1.03, 1.03), duration: 1500.ms),
+      ),
       appBar: AppBar(
         title: Text('Suppliers', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
         backgroundColor: primaryGreen,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12.0, top: 10.0, bottom: 10.0),
-            child: InkWell(
-              onTap: _showAddSupplierDialog,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: buttonGreen,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.add, color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Add Supplier', style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [

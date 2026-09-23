@@ -14,6 +14,7 @@ import '../../core/database/database_helper.dart';
 import '../../core/services/ledger_pdf_service.dart';
 import 'customer_profile_screen.dart';
 import 'contact_selection_sheet.dart';
+import 'add_customer_screen.dart';
 
 List<Customer> _parseCustomers(List<Map<String, dynamic>> data) {
   return data.map<Customer>((json) {
@@ -136,6 +137,52 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
     return Scaffold(
       backgroundColor: backgroundLight,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: GestureDetector(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddCustomerScreen(onCustomerAdded: _loadCustomers),
+            ),
+          );
+          _loadCustomers();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF10B981).withOpacity(0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Add Customer',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+         .scale(begin: const Offset(1, 1), end: const Offset(1.03, 1.03), duration: 1500.ms),
+      ),
       appBar: AppBar(
         title: Text('Customers', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 20)),
         backgroundColor: primaryGreen,
@@ -147,21 +194,6 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             onPressed: _generateAllPendingCustomersPdf,
             tooltip: 'Download Pending Report',
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: TextButton.icon(
-              onPressed: () {
-                ContactSelectionSheet.show(context);
-              },
-              icon: const Icon(Icons.add, color: primaryGreen, size: 18),
-              label: Text('Add Customer', style: GoogleFonts.inter(color: primaryGreen, fontWeight: FontWeight.w600, fontSize: 13)),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-            ),
-          )
         ],
       ),
       body: _isLoading
