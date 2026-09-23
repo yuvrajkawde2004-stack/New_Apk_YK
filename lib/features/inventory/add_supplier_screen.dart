@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/database/database_helper.dart';
+import '../customers/contact_selection_sheet.dart';
 
 class AddSupplierScreen extends StatefulWidget {
   const AddSupplierScreen({super.key});
@@ -105,6 +106,60 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
     );
   }
 
+  Widget _buildTopTabs() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: primaryGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: primaryGreen, width: 1.5),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.person_add_alt_1_outlined, color: primaryGreen, size: 28),
+                const SizedBox(height: 8),
+                Text('Add Manually', style: GoogleFonts.inter(color: primaryGreen, fontWeight: FontWeight.bold)),
+                Text('Enter details yourself', style: GoogleFonts.inter(color: primaryGreen, fontSize: 10)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              ContactSelectionSheet.show(
+                context, 
+                isSupplier: true, 
+                onAdded: () => Navigator.pop(context, true), // Close screen with success on added
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.contact_phone_outlined, color: Colors.grey.shade600, size: 28),
+                  const SizedBox(height: 8),
+                  Text('Import from Contacts', style: GoogleFonts.inter(color: Colors.grey.shade800, fontWeight: FontWeight.bold)),
+                  Text('Select from phone contacts', style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 10)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -133,6 +188,8 @@ class _AddSupplierScreenState extends State<AddSupplierScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildTopTabs(),
+                      const SizedBox(height: 24),
                       _buildTextField('Supplier Name', _nameCtrl, required: true),
                       _buildTextField('Mobile Number', _mobileCtrl, required: true, keyboardType: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)]),
                       _buildTextField('Email', _emailCtrl, keyboardType: TextInputType.emailAddress),

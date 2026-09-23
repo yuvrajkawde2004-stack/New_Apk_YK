@@ -82,7 +82,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         Expanded(
           child: InkWell(
             onTap: () {
-              ContactSelectionSheet.show(context);
+              ContactSelectionSheet.show(context, onAdded: widget.onCustomerAdded);
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(
