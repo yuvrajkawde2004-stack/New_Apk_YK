@@ -1306,7 +1306,7 @@ insetPadding: const EdgeInsets.all(16),
                         const Color(0xFF3B82F6), const Color(0xFF10B981),
                         const Color(0xFF8B5CF6), const Color(0xFFF43F5E),
                       ];
-                      final color = colors[p.id % colors.length];
+                      final color = colors[(p.id ?? 0) % colors.length];
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
