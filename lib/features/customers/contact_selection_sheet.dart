@@ -203,7 +203,7 @@ class _ContactSelectionSheetState extends State<ContactSelectionSheet> {
                       style: GoogleFonts.outfit(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimaryDark,
+                        color: const Color(0xFF1F2937),
                       ),
                     ),
                     const Spacer(),
@@ -298,7 +298,7 @@ class _ContactSelectionSheetState extends State<ContactSelectionSheet> {
                                                   style: GoogleFonts.outfit(
                                                     fontWeight: FontWeight.w600,
                                                     fontSize: 16,
-                                                    color: AppColors.textPrimaryDark,
+                                                    color: const Color(0xFF1F2937),
                                                   ),
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,

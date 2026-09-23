@@ -482,7 +482,7 @@ class _AddPurchaseFormScreenState extends State<AddPurchaseFormScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Add Purchase', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 18)),
+            Text('Add Product', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 18)),
             Text('Add products to your inventory', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
           ],
         ),

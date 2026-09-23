@@ -280,7 +280,7 @@ class _SupplierLedgerScreenState extends State<SupplierLedgerScreen> {
               elevation: 0,
             ),
             icon: const Icon(Icons.add),
-            label: Text('Add Purchase', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
+            label: Text('Add Product', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
             onPressed: () async {
               await Navigator.push(
                 context,
